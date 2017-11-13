@@ -1,0 +1,11 @@
+.DS_Store
+*.swp
+*/**/*un~
+*un~
+*/**/.DS_Store
+npm-debug.log
+.npm/
+node_modules
+.npm/
+package-lock.json
+

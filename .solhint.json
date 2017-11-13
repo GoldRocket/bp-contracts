@@ -1,0 +1,11 @@
+{
+    "extends": "default",
+    "rules": {
+      "avoid-throw": "error",
+      "avoid-suicide": "error",
+      "avoid-sha3": "error",
+      "indent": ["warn", 4],
+      "two-lines-top-level-separator": false,
+      "separate-by-one-line-in-contract": false
+    }
+  }
