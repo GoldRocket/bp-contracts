@@ -1,15 +1,13 @@
-import exceptions from "./exceptions";
+import utils from "./utils";
 
 const TournamentManager = artifacts.require("./TournamentManager.sol");
 
 contract("TournamentManager", (accounts) => {
     let instance;
 
-    async function init() {
-        instance = await TournamentManager.new({
-            from: accounts[0]
-        });
-    }
+    beforeEach(async () => {
+        instance = await TournamentManager.new();
+    });
 
     async function signPick(pick) {
         const hash = web3.sha3(pick);
@@ -32,29 +30,23 @@ contract("TournamentManager", (accounts) => {
     }
 
     it("should start with no contests", async () => {
-        await init();
-
         const numContests = await instance.getNumContests();
 
         assert.equal(numContests, 0, "There should be no contests");
     });
 
     it("should throw when attempting to get a contest by invalid index", async () => {
-        await init();
-
-        exceptions.expectInvalidOpcode(instance.getContestId(0));
+        const promise = instance.getContestId(0);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should throw when attempting to get num entries for an invalid contest id", async () => {
-        await init();
-
         const contestId = web3.sha3("unknown");
-        exceptions.expectInvalidOpcode(instance.getNumContestEntries(contestId));
+        const promise = instance.getNumContestEntries(contestId);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should support publishing new contests", async () => {
-        await init();
-
         const contest1 = web3.sha3("contest1");
         await instance.publishContest(contest1);
 
@@ -69,8 +61,6 @@ contract("TournamentManager", (accounts) => {
     });
 
     it("should contain zero entries for a new contests", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -79,29 +69,23 @@ contract("TournamentManager", (accounts) => {
     });
 
     it("should not allow publishing a contest from a non-owner account", async () => {
-        await init();
-
         const contestId = web3.sha3("contest");
         const promise = instance.publishContest(contestId, {
             from: accounts[1]
         });
 
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should not allow publishing the same contest twice", async () => {
-        await init();
-
         const contestId = web3.sha3("contest");
         await instance.publishContest(contestId);
 
         const promise = instance.publishContest(contestId);
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should allow getting the ids of all contests", async () => {
-        await init();
-
         const contest1 = web3.sha3("contest 1");
         await instance.publishContest(contest1);
 
@@ -118,12 +102,10 @@ contract("TournamentManager", (accounts) => {
         assert.equal(id2, contest2, "Second contest id should match");
 
         const promise = instance.getContestId(2);
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should allow adding picks", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -145,8 +127,6 @@ contract("TournamentManager", (accounts) => {
     });
 
     it("should not allow adding more than one pick for a single user", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -163,15 +143,13 @@ contract("TournamentManager", (accounts) => {
             from: accounts[1]
         });
 
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
 
         numEntries = await instance.getNumContestEntries(contestId);
         assert.equal(numEntries, 1, "There should be one pick");
     });
 
     it("should not allow a pick with an invalid signature", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -181,12 +159,10 @@ contract("TournamentManager", (accounts) => {
             from: accounts[1]
         });
 
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should not allow submitting a zero-pick", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -195,12 +171,10 @@ contract("TournamentManager", (accounts) => {
             from: accounts[1]
         });
 
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 
     it("should allow retrieving all entries in a contest", async () => {
-        await init();
-
         const contestId = web3.sha3("new contest");
         await instance.publishContest(contestId);
 
@@ -227,6 +201,6 @@ contract("TournamentManager", (accounts) => {
         assert.equal(entryPick2, pick2.hash);
 
         const promise = instance.getContestEntry(contestId, 2);
-        exceptions.expectInvalidOpcode(promise);
+        await utils.expectInvalidOpcode(promise);
     });
 });
