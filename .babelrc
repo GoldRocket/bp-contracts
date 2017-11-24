@@ -2,6 +2,7 @@
     "plugins": [
     ],
     "presets": [
+        "stage-0",
         [
             "env",
             {

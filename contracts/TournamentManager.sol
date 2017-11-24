@@ -1,26 +1,22 @@
 pragma solidity 0.4.18;
 
-contract TournamentManager {
+import "./bancor/Owned.sol";
+
+contract TournamentManager is Owned {
     struct Contest {
         bytes32 id;
         address[] entrants;
         mapping(address => bytes32) picks;
     }
 
-    address owner;
-    mapping(bytes32 => Contest) contests;
-    bytes32[] contestIds;
-
-    function TournamentManager() public {
-        owner = msg.sender;
-    }
+    mapping(bytes32 => Contest) private contests;
+    bytes32[] private contestIds;
 
     //////////////////////////////////////////////
     // Transactions
     //////////////////////////////////////////////
 
-    function publishContest(bytes32 contestId) public {
-        require(msg.sender == owner);
+    function publishContest(bytes32 contestId) public onlyOwner {
         require(isUnknownContestId(contestId));
 
         contestIds.push(contestId);
@@ -29,7 +25,7 @@ contract TournamentManager {
 
     function submitPick(bytes32 contestId, bytes32 pickHash, uint8 v, bytes32 r, bytes32 s) public {
         require(pickHash != 0);
-        require(verifyPickSignature(pickHash, v, r, s));
+        require(isValidSignature(pickHash, v, r, s));
 
         var contest = getContest(contestId);
         require(contest.picks[msg.sender] == 0);
@@ -103,7 +99,7 @@ contract TournamentManager {
         return index >= 0 && index < arrayLength;
     }
 
-    function verifyPickSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+    function isValidSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(prefix, hash);
 
