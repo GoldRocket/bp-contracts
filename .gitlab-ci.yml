@@ -1,0 +1,26 @@
+image: node:6.12
+
+variables:
+  GIT_STRATEGY: clone
+
+stages:
+  - test
+
+cache:
+  key: "$CI_PROJECT_ID"
+  paths:
+    - node_modules/
+    - .yarn
+
+before_script:
+    - "bash ./ci/setup.sh"
+
+test_lint:
+  stage: test
+  script:
+    - "yarn lint"
+
+test_test:
+  stage: test
+  script:
+    - "yarn test"
