@@ -20,7 +20,8 @@
   },
   "scripts": {
     "postinstall": "truffle compile",
-    "test": "eslint . && truffle test"
+    "lint": "eslint .",
+    "test": "truffle test"
   },
   "keywords": [],
   "author": "",
