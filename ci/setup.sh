@@ -10,6 +10,6 @@ apt-get install yarn
 elapsed
 
 log "Running 'yarn'..."
-yarn config set cache-folder /builds/BlitzPick/bp-contracts/.yarn
+yarn config set cache-folder /builds/dacarley/bp-contracts/.yarn
 yarn
 elapsed
