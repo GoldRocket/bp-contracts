@@ -21,7 +21,9 @@ contract ERC20Token is Utils {
     /// @param _name        token name
     /// @param _symbol      token symbol
     /// @param _decimals    decimal points, for display purposes
-    function ERC20Token(string _name, string _symbol, uint8 _decimals) public {
+    function ERC20Token(string _name, string _symbol, uint8 _decimals)
+        public
+    {
         require(bytes(_name).length > 0 && bytes(_symbol).length > 0);
 
         name = _name;
@@ -34,7 +36,12 @@ contract ERC20Token is Utils {
     /// @param _to      target address
     /// @param _value   transfer amount
     /// @return true if the transfer was successful, false if it wasn't
-    function transfer(address _to, uint256 _value) public validAddress(_to) notThis(_to) returns (bool success) {
+    function transfer(address _to, uint256 _value)
+        public
+        validAddress(_to)
+        notThis(_to)
+        returns (bool success)
+    {
         balanceOf[msg.sender] = safeSub(balanceOf[msg.sender], _value);
         balanceOf[_to] = safeAdd(balanceOf[_to], _value);
         Transfer(msg.sender, _to, _value);
@@ -47,7 +54,13 @@ contract ERC20Token is Utils {
     /// @param _to      target address
     /// @param _value   transfer amount
     /// @return true if the transfer was successful, false if it wasn't
-    function transferFrom(address _from, address _to, uint256 _value) public validAddress(_from) validAddress(_to) notThis(_to) returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value)
+        public
+        validAddress(_from)
+        validAddress(_to)
+        notThis(_to)
+        returns (bool success)
+    {
         allowance[_from][msg.sender] = safeSub(allowance[_from][msg.sender], _value);
         balanceOf[_from] = safeSub(balanceOf[_from], _value);
         balanceOf[_to] = safeAdd(balanceOf[_to], _value);
@@ -63,7 +76,11 @@ contract ERC20Token is Utils {
     /// @param _spender approved address
     /// @param _value   allowance amount
     /// @return true if the approval was successful, false if it wasn't
-    function approve(address _spender, uint256 _value) public validAddress(_spender) returns (bool success) {
+    function approve(address _spender, uint256 _value)
+        public
+        validAddress(_spender)
+        returns (bool success)
+    {
         // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
         require(_value == 0 || allowance[msg.sender][_spender] == 0);
 

@@ -31,7 +31,9 @@ contract VestingManager is Owned {
 
     /// @dev Constructor that initializes the address of the BPCSmartToken contract.
     /// @param _bpc BPCSmartToken The address of the previously deployed BPCSmartToken smart contract.
-    function VestingManager(BPCSmartToken _bpc) public {
+    function VestingManager(BPCSmartToken _bpc)
+        public
+    {
         require(_bpc != address(0));
 
         bpc = _bpc;
@@ -42,7 +44,10 @@ contract VestingManager is Owned {
     /// @param _value uint256 The amount of tokens to be granted.
     /// @param _cliff uint256 The end of the cliff period.
     /// @param _end uint256 The end of the vesting period.
-    function grantTokens(address _to, uint256 _value, uint256 _cliff, uint256 _end) public onlyOwner {
+    function grantTokens(address _to, uint256 _value, uint256 _cliff, uint256 _end)
+        public
+        onlyOwner
+    {
         require(_to != address(0));
         require(_value > 0);
         require(now <= _cliff && _cliff <= _end);
@@ -67,7 +72,10 @@ contract VestingManager is Owned {
 
     /// @dev Revoke the grant of tokens of a specifed address.
     /// @param _holder The address which will have its tokens revoked.
-    function revokeGrant(address _holder) public onlyOwner {
+    function revokeGrant(address _holder)
+        public
+        onlyOwner
+    {
         Grant storage grant = grants[_holder];
 
         // Send the remaining BPC back to the owner.
@@ -86,7 +94,11 @@ contract VestingManager is Owned {
     /// @param _holder address The address of the holder.
     /// @param _time uint256 The specific time.
     /// @return a uint256 representing a holder's total amount of vested tokens.
-    function getVestedTokens(address _holder, uint256 _time) public constant returns (uint256) {
+    function getVestedTokens(address _holder, uint256 _time)
+        public
+        constant
+        returns (uint256)
+    {
         Grant storage grant = grants[_holder];
         if (grant.value == 0) {
             return 0;
@@ -95,7 +107,11 @@ contract VestingManager is Owned {
         return calculateVestedTokens(grant, _time);
     }
 
-    function getClaimableTokens(address _holder, uint256 _time) public constant returns (uint256) {
+    function getClaimableTokens(address _holder, uint256 _time)
+        public
+        constant
+        returns (uint256)
+    {
         Grant storage grant = grants[_holder];
         if (grant.value == 0) {
             return 0;
@@ -109,7 +125,10 @@ contract VestingManager is Owned {
 
     /// @dev Claim vested tokens by transferring them to their holder.
     /// @return a uint256 representing the amount of vested tokens transferred to their holder.
-    function claimVestedTokens() public returns (uint256) {
+    function claimVestedTokens()
+        public
+        returns (uint256)
+    {
         Grant storage grant = grants[msg.sender];
         require(grant.value != 0);
 
@@ -146,7 +165,11 @@ contract VestingManager is Owned {
     ///   |    .          |
     ///   +===+===========+---------+----------> time
     ///     Start       Cliff      End
-    function calculateVestedTokens(Grant _grant, uint256 _time) private pure returns (uint256) {
+    function calculateVestedTokens(Grant _grant, uint256 _time)
+        private
+        pure
+        returns (uint256)
+    {
         if (_time < _grant.cliff) {
             return 0;
         }
