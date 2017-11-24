@@ -23,7 +23,9 @@ contract TournamentManager is Owned {
         contests[contestId].id = contestId;
     }
 
-    function submitPick(bytes32 contestId, bytes32 pickHash, uint8 v, bytes32 r, bytes32 s) public {
+    function submitPick(bytes32 contestId, bytes32 pickHash, uint8 v, bytes32 r, bytes32 s)
+        public
+    {
         require(pickHash != 0);
         require(isValidSignature(pickHash, v, r, s));
 
@@ -38,23 +40,39 @@ contract TournamentManager is Owned {
     // Getter functions
     //////////////////////////////////////////////
 
-    function getNumContests() public view returns (uint) {
+    function getNumContests()
+        public
+        view
+        returns (uint)
+    {
         return contestIds.length;
     }
 
-    function getContestId(uint index) public view returns (bytes32) {
+    function getContestId(uint index)
+        public
+        view
+        returns (bytes32)
+    {
         require(isValidIndex(contestIds.length, index));
 
         return contestIds[index];
     }
 
-    function getNumContestEntries(bytes32 contestId) public view returns (uint) {
+    function getNumContestEntries(bytes32 contestId)
+        public
+        view
+        returns (uint)
+    {
         var contest = getContest(contestId);
 
         return contest.entrants.length;
     }
 
-    function getContestEntryForEntrant(bytes32 contestId, address entrant) public view returns (bytes32) {
+    function getContestEntryForEntrant(bytes32 contestId, address entrant)
+        public
+        view
+        returns (bytes32)
+    {
         var contest = getContest(contestId);
         var pick = contest.picks[entrant];
         require(pick != 0); // This reflects that the entrant doesn't exist.
@@ -62,7 +80,11 @@ contract TournamentManager is Owned {
         return pick;
     }
 
-    function getContestEntry(bytes32 contestId, uint index) public view returns (address, bytes32) {
+    function getContestEntry(bytes32 contestId, uint index)
+        public
+        view
+        returns (address, bytes32)
+    {
         var contest = getContest(contestId);
         require(isValidIndex(contest.entrants.length, index));
 
@@ -80,7 +102,11 @@ contract TournamentManager is Owned {
     // Internal functions
     //////////////////////////////////////////////
 
-    function getContest(bytes32 contestId) internal view returns (Contest storage) {
+    function getContest(bytes32 contestId)
+        internal
+        view
+        returns (Contest storage)
+    {
         require(contestId != 0);
         var contest = contests[contestId];
         
@@ -89,17 +115,29 @@ contract TournamentManager is Owned {
         return contest;
     }
 
-    function isUnknownContestId(bytes32 contestId) internal view returns (bool) {
+    function isUnknownContestId(bytes32 contestId)
+        internal
+        view
+        returns (bool)
+    {
         require(contestId != 0);
 
         return contests[contestId].id == 0;
     }
 
-    function isValidIndex(uint arrayLength, uint index) internal pure returns (bool) {
+    function isValidIndex(uint arrayLength, uint index)
+        internal
+        pure
+        returns (bool)
+    {
         return index >= 0 && index < arrayLength;
     }
 
-    function isValidSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal view returns (bool) {
+    function isValidSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s)
+        internal
+        view
+        returns (bool)
+    {
         bytes memory prefix = "\x19Ethereum Signed Message:\n32";
         bytes32 prefixedHash = keccak256(prefix, hash);
 

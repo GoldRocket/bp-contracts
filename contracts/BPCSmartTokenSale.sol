@@ -65,7 +65,9 @@ contract BPCSmartTokenSale is Owned {
 
     /// @dev Constructor that initializes the sale conditions.
     /// @param _startTime uint256 The start time of the token sale.
-    function BPCSmartTokenSale(uint256 _startTime) public {
+    function BPCSmartTokenSale(uint256 _startTime)
+        public
+    {
         assert(tokenCountsAreValid());
         require(_startTime > now);
 
@@ -75,12 +77,20 @@ contract BPCSmartTokenSale is Owned {
     }
 
     /// @dev Fallback function that will delegate the request to buy tokens.
-    function () external payable onlyDuringSale {
+    function ()
+        external
+        payable
+        onlyDuringSale
+    {
         purchaseTokens();
     }
 
     /// @dev Finalizes the token sale event.
-    function finalize() external onlyAfterSale onlyOwner {
+    function finalize()
+        external
+        onlyAfterSale
+        onlyOwner
+    {
         require(!isFinalized);
 
         uint256 immediateTokens = 0 +
@@ -125,7 +135,10 @@ contract BPCSmartTokenSale is Owned {
     ///   2. Calling this method during the token sale will prevent the token sale to continue, since only the owner of
     ///      the BPCSmartToken contract can issue new tokens.
     ///    3. Due to #2, calling this method effectively pauses the token sale.
-    function transferSmartTokenOwnership(address newOwner) external onlyOwner {
+    function transferSmartTokenOwnership(address newOwner)
+        external
+        onlyOwner
+    {
         bpc.transferOwnership(newOwner);
     }
 
@@ -134,7 +147,10 @@ contract BPCSmartTokenSale is Owned {
     ///
     /// Notes:
     ///   1. This method must be called to "un-pause" the token sale after a call to transferSmartTokenOwnership
-    function acceptSmartTokenOwnership() external onlyOwner {
+    function acceptSmartTokenOwnership()
+        external
+        onlyOwner
+    {
         bpc.acceptOwnership();
     }
 
@@ -143,18 +159,30 @@ contract BPCSmartTokenSale is Owned {
     ///
     /// Notes:
     ///   1. The new owner will need to call VestingManager's acceptOwnership directly in order to accept the ownership.
-    function transferVestingManagerOwnership(address newOwner) external onlyAfterSale onlyOwner {
+    function transferVestingManagerOwnership(address newOwner)
+        external
+        onlyAfterSale
+        onlyOwner
+    {
         vestingManager.transferOwnership(newOwner);
     }
 
     /// @dev Accepts new ownership on behalf of the VestingManager contract.
     /// This can be used, by the token sale contract itself to claim back ownership of the VestingManager contract.
-    function acceptVestingManagerOwnership() external onlyAfterSale onlyOwner {
+    function acceptVestingManagerOwnership()
+        external
+        onlyAfterSale
+        onlyOwner
+    {
         vestingManager.acceptOwnership();
     }
 
     /// @dev Create and sell tokens to the caller.
-    function purchaseTokens() public payable onlyDuringSale {
+    function purchaseTokens()
+        public
+        payable
+        onlyDuringSale
+    {
         assert(!isFinalized);
         require(msg.value > 0);
 
@@ -177,7 +205,9 @@ contract BPCSmartTokenSale is Owned {
     /// @dev Issues tokens for the recipient.
     /// @param _recipient address The address of the recipient.
     /// @param _tokens uint256 The amount of tokens to issue.
-    function issuePurchasedTokens(address _recipient, uint256 _tokens) private {
+    function issuePurchasedTokens(address _recipient, uint256 _tokens)
+        private
+    {
         tokensSold = tokensSold.add(_tokens);
 
         bpc.issue(_recipient, _tokens);
@@ -185,7 +215,11 @@ contract BPCSmartTokenSale is Owned {
         TokensPurchased(_recipient, _tokens);
     }
 
-    function tokenCountsAreValid() private pure returns (bool) {
+    function tokenCountsAreValid()
+        private
+        pure
+        returns (bool)
+    {
         uint256 sum = 0 +
             SEED_ROUND_TOKENS +
             STRATEGIC_PARTNER_TOKENS +

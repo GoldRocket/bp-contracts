@@ -23,7 +23,10 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _name       token name
     /// @param _symbol     token short symbol, minimum 1 character
     /// @param _decimals   for display purposes only
-    function SmartToken(string _name, string _symbol, uint8 _decimals) public ERC20Token(_name, _symbol, _decimals) {
+    function SmartToken(string _name, string _symbol, uint8 _decimals)
+        public
+        ERC20Token(_name, _symbol, _decimals)
+    {
         NewSmartToken(address(this));
     }
 
@@ -37,7 +40,10 @@ contract SmartToken is Owned, ERC20Token {
     /// @dev disables/enables transfers
     /// can only be called by the contract owner
     /// @param _disable    true to disable transfers, false to enable them
-    function disableTransfers(bool _disable) public onlyOwner {
+    function disableTransfers(bool _disable)
+        public
+        onlyOwner
+    {
         transfersEnabled = !_disable;
     }
 
@@ -45,7 +51,12 @@ contract SmartToken is Owned, ERC20Token {
     /// can only be called by the contract owner
     /// @param _to         account to receive the new amount
     /// @param _amount     amount to increase the supply by
-    function issue(address _to, uint256 _amount) public onlyOwner validAddress(_to) notThis(_to) {
+    function issue(address _to, uint256 _amount)
+        public
+        onlyOwner
+        validAddress(_to)
+        notThis(_to)
+    {
         totalSupply = safeAdd(totalSupply, _amount);
         balanceOf[_to] = safeAdd(balanceOf[_to], _amount);
 
@@ -57,7 +68,9 @@ contract SmartToken is Owned, ERC20Token {
     /// can be called by the contract owner to destroy tokens from any account or by any holder to destroy tokens from his/her own account
     /// @param _from       account to remove the amount from
     /// @param _amount     amount to decrease the supply by
-    function destroy(address _from, uint256 _amount) public {
+    function destroy(address _from, uint256 _amount)
+        public
+    {
         require(msg.sender == _from || msg.sender == owner); // validate input
 
         balanceOf[_from] = safeSub(balanceOf[_from], _amount);
@@ -77,7 +90,11 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _to      target address
     /// @param _value   transfer amount
     /// @return true if the transfer was successful, false if it wasn't
-    function transfer(address _to, uint256 _value) public onlyIfTransfersEnabled returns (bool success) {
+    function transfer(address _to, uint256 _value)
+        public
+        onlyIfTransfersEnabled
+        returns (bool success)
+    {
         assert(super.transfer(_to, _value));
         return true;
     }
@@ -89,7 +106,10 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _to      target address
     /// @param _value   transfer amount
     /// @return true if the transfer was successful, false if it wasn't
-    function transferFrom(address _from, address _to, uint256 _value) public onlyIfTransfersEnabled returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public
+        onlyIfTransfersEnabled
+        returns (bool success)
+    {
         assert(super.transferFrom(_from, _to, _value));
         return true;
     }

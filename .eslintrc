@@ -73,6 +73,7 @@
             {
                 "devDependencies": [
                     "truffle*.js",
+                    "migrations/**/*.js",
                     "test/**/*.js"
                 ]
             }
