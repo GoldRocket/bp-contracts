@@ -8,6 +8,9 @@
     "extends": "airbnb-base",
     "plugins": [],
     "rules": {
+        "max-len": [
+            "error", 120
+        ],
         "curly": [
             "error",
             "all"

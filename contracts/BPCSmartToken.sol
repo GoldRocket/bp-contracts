@@ -1,6 +1,6 @@
 pragma solidity 0.4.18;
 
-import "./bancor/SmartToken.sol";
+import "./common/SmartToken.sol";
 
 contract BPCSmartToken is SmartToken {
     function BPCSmartToken()

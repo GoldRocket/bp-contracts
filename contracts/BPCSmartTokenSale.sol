@@ -1,14 +1,14 @@
 pragma solidity 0.4.18;
 
-import "./bancor/Owned.sol";
+import "./common/BaseContract.sol";
+import "./common/Owned.sol";
 import "./BPCSmartToken.sol";
-import "./libraries/SafeMath.sol";
 import "./VestingManager.sol";
 
 // solhint-disable not-rely-on-time
 
 /// @title BPC Smart Token sale
-contract BPCSmartTokenSale is Owned {
+contract BPCSmartTokenSale is BaseContract, Owned {
     using SafeMath for uint256;
 
     uint256 public constant DURATION = 14 days;
@@ -67,9 +67,9 @@ contract BPCSmartTokenSale is Owned {
     /// @param _startTime uint256 The start time of the token sale.
     function BPCSmartTokenSale(uint256 _startTime)
         public
+        onlyIf(_startTime > now)
     {
         assert(tokenCountsAreValid());
-        require(_startTime > now);
 
         bpc = new BPCSmartToken();
         startTime = _startTime;
@@ -90,9 +90,8 @@ contract BPCSmartTokenSale is Owned {
         external
         onlyAfterSale
         onlyOwner
+        onlyIf(!isFinalized)
     {
-        require(!isFinalized);
-
         uint256 immediateTokens = 0 +
             SEED_ROUND_TOKENS +
             STRATEGIC_PARTNER_TOKENS +
@@ -182,10 +181,8 @@ contract BPCSmartTokenSale is Owned {
         public
         payable
         onlyDuringSale
+        greaterThanZero(msg.value)
     {
-        assert(!isFinalized);
-        require(msg.value > 0);
-
         uint256 desiredTokens = msg.value.mul(ETH_BPC_EXCHANGE_RATE);
         uint256 tokensRemaining = TOKEN_SALE_TOKENS.sub(tokensSold);
         uint256 tokens = SafeMath.min256(desiredTokens, tokensRemaining);

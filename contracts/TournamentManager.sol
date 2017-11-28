@@ -1,34 +1,61 @@
 pragma solidity 0.4.18;
 
-import "./bancor/Owned.sol";
+import "./common/BaseContract.sol";
+import "./common/Owned.sol";
 
-contract TournamentManager is Owned {
+contract TournamentManager is BaseContract, Owned {
     struct Contest {
-        bytes32 id;
+        uint256 id;
         address[] entrants;
         mapping(address => bytes32) picks;
     }
 
-    mapping(bytes32 => Contest) private contests;
-    bytes32[] private contestIds;
+    mapping(uint256 => Contest) private contests;
+    uint256[] private contestIds;
+
+    //////////////////////////////////////////////
+    // Modifiers
+    //////////////////////////////////////////////
+
+    modifier validPick(bytes32 pickHash, uint8 v, bytes32 r, bytes32 s) {
+        require(pickHash != 0);
+
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedHash = keccak256(prefix, pickHash);
+
+        address signer = ecrecover(prefixedHash, v, r, s);
+        
+        require(signer == owner);
+
+        _;
+    }
+
+    modifier onlyUnknownContestId(uint256 contestId) {
+        require(contests[contestId].id == 0);
+
+        _;
+    }
 
     //////////////////////////////////////////////
     // Transactions
     //////////////////////////////////////////////
 
-    function publishContest(bytes32 contestId) public onlyOwner {
-        require(isUnknownContestId(contestId));
-
+    function publishContest(uint256 contestId)
+        external
+        validParamData(1)
+        onlyOwner
+        nonZero(contestId)
+        onlyUnknownContestId(contestId)
+    {
         contestIds.push(contestId);
         contests[contestId].id = contestId;
     }
 
-    function submitPick(bytes32 contestId, bytes32 pickHash, uint8 v, bytes32 r, bytes32 s)
-        public
+    function submitPick(uint256 contestId, bytes32 pickHash, uint8 v, bytes32 r, bytes32 s)
+        external
+        validParamData(5)
+        validPick(pickHash, v, r, s)
     {
-        require(pickHash != 0);
-        require(isValidSignature(pickHash, v, r, s));
-
         var contest = getContest(contestId);
         require(contest.picks[msg.sender] == 0);
 
@@ -41,52 +68,39 @@ contract TournamentManager is Owned {
     //////////////////////////////////////////////
 
     function getNumContests()
-        public
-        view
-        returns (uint)
+        public view
+        validParamData(0)
+        returns (uint256)
     {
         return contestIds.length;
     }
 
-    function getContestId(uint index)
-        public
-        view
-        returns (bytes32)
+    function getContestId(uint256 index)
+        public view
+        validParamData(1)
+        validIndex(contestIds.length, index)
+        returns (uint256)
     {
-        require(isValidIndex(contestIds.length, index));
-
         return contestIds[index];
     }
 
-    function getNumContestEntries(bytes32 contestId)
-        public
-        view
-        returns (uint)
+    function getNumContestEntries(uint256 contestId)
+        public view
+        validParamData(1)
+        returns (uint256)
     {
         var contest = getContest(contestId);
 
         return contest.entrants.length;
     }
 
-    function getContestEntryForEntrant(bytes32 contestId, address entrant)
-        public
-        view
-        returns (bytes32)
-    {
-        var contest = getContest(contestId);
-        var pick = contest.picks[entrant];
-        require(pick != 0); // This reflects that the entrant doesn't exist.
-
-        return pick;
-    }
-
-    function getContestEntry(bytes32 contestId, uint index)
-        public
-        view
+    function getContestEntry(uint256 contestId, uint256 index)
+        public view
+        validParamData(2)
         returns (address, bytes32)
     {
         var contest = getContest(contestId);
-        require(isValidIndex(contest.entrants.length, index));
+        requireValidIndex(contest.entrants.length, index);
 
         var entrant = contest.entrants[index];
         var pick = contest.picks[entrant];
@@ -98,49 +112,31 @@ contract TournamentManager is Owned {
         );
     }
 
+    function getContestEntryForEntrant(uint256 contestId, address entrant)
+        public view
+        validParamData(2)
+        returns (bytes32)
+    {
+        var contest = getContest(contestId);
+        var pick = contest.picks[entrant];
+        require(pick != 0); // This reflects that the entrant doesn't exist.
+
+        return pick;
+    }
+
     //////////////////////////////////////////////
     // Internal functions
     //////////////////////////////////////////////
 
-    function getContest(bytes32 contestId)
-        internal
-        view
+    function getContest(uint256 contestId)
+        internal view
+        nonZero(contestId)
         returns (Contest storage)
     {
-        require(contestId != 0);
         var contest = contests[contestId];
         
         require(contest.id == contestId);
 
         return contest;
-    }
-
-    function isUnknownContestId(bytes32 contestId)
-        internal
-        view
-        returns (bool)
-    {
-        require(contestId != 0);
-
-        return contests[contestId].id == 0;
-    }
-
-    function isValidIndex(uint arrayLength, uint index)
-        internal
-        pure
-        returns (bool)
-    {
-        return index >= 0 && index < arrayLength;
-    }
-
-    function isValidSignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s)
-        internal
-        view
-        returns (bool)
-    {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedHash = keccak256(prefix, hash);
-
-        return ecrecover(prefixedHash, v, r, s) == owner;
     }
 }
