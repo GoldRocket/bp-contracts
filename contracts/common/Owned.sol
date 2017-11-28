@@ -1,6 +1,8 @@
 pragma solidity 0.4.18;
 
-contract Owned {
+import "./BaseContract.sol";
+
+contract Owned is BaseContract {
     address public owner;
     address public newOwner;
 
@@ -13,7 +15,7 @@ contract Owned {
     }
 
     modifier onlyOwner {
-        assert(msg.sender == owner);
+        require(msg.sender == owner);
 
         _;
     }
@@ -24,17 +26,19 @@ contract Owned {
     /// @param _newOwner    new contract owner
     function transferOwnership(address _newOwner)
         public
+        validParamData(1)
         onlyOwner
+        onlyIf(_newOwner != owner)
     {
-        require(_newOwner != owner);
         newOwner = _newOwner;
     }
 
     /// @dev used by a new owner to accept an ownership transfer
     function acceptOwnership()
         public
+        validParamData(0)
+        onlyIf(msg.sender == newOwner)
     {
-        require(msg.sender == newOwner);
         OwnerUpdate(owner, newOwner);
         owner = newOwner;
         newOwner = 0x0;

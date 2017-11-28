@@ -1,9 +1,12 @@
 pragma solidity 0.4.18;
 
+import "./BaseContract.sol";
 import "./ERC20Token.sol";
 import "./Owned.sol";
 
-contract SmartToken is Owned, ERC20Token {
+contract SmartToken is BaseContract, Owned, ERC20Token {
+    using SafeMath for uint256;
+
     string public version = "0.3";
 
     bool public transfersEnabled = true;
@@ -24,7 +27,7 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _symbol     token short symbol, minimum 1 character
     /// @param _decimals   for display purposes only
     function SmartToken(string _name, string _symbol, uint8 _decimals)
-        public
+        internal
         ERC20Token(_name, _symbol, _decimals)
     {
         NewSmartToken(address(this));
@@ -54,11 +57,12 @@ contract SmartToken is Owned, ERC20Token {
     function issue(address _to, uint256 _amount)
         public
         onlyOwner
+        validParamData(2)
         validAddress(_to)
         notThis(_to)
     {
-        totalSupply = safeAdd(totalSupply, _amount);
-        balanceOf[_to] = safeAdd(balanceOf[_to], _amount);
+        totalSupply = totalSupply.add(_amount);
+        balanceOf[_to] = balanceOf[_to].add(_amount);
 
         Issuance(_amount);
         Transfer(this, _to, _amount);
@@ -70,11 +74,12 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _amount     amount to decrease the supply by
     function destroy(address _from, uint256 _amount)
         public
+        validParamData(2)
     {
         require(msg.sender == _from || msg.sender == owner); // validate input
 
-        balanceOf[_from] = safeSub(balanceOf[_from], _amount);
-        totalSupply = safeSub(totalSupply, _amount);
+        balanceOf[_from] = balanceOf[_from].sub(_amount);
+        totalSupply = totalSupply.sub(_amount);
 
         Transfer(_from, this, _amount);
         Destruction(_amount);
@@ -92,6 +97,7 @@ contract SmartToken is Owned, ERC20Token {
     /// @return true if the transfer was successful, false if it wasn't
     function transfer(address _to, uint256 _value)
         public
+        validParamData(2)
         onlyIfTransfersEnabled
         returns (bool success)
     {
@@ -106,7 +112,9 @@ contract SmartToken is Owned, ERC20Token {
     /// @param _to      target address
     /// @param _value   transfer amount
     /// @return true if the transfer was successful, false if it wasn't
-    function transferFrom(address _from, address _to, uint256 _value) public
+    function transferFrom(address _from, address _to, uint256 _value)
+        public
+        validParamData(3)
         onlyIfTransfersEnabled
         returns (bool success)
     {

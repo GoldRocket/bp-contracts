@@ -1,7 +1,7 @@
 pragma solidity 0.4.18;
 
-import "./bancor/Owned.sol";
-import "./libraries/SafeMath.sol";
+import "./common/Owned.sol";
+import "./common/SafeMath.sol";
 import "./BPCSmartToken.sol";
 
 // solhint-disable not-rely-on-time
