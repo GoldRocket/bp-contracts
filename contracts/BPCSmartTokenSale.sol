@@ -19,14 +19,14 @@ contract BPCSmartTokenSale is BaseContract, Owned {
     VestingManager public vestingManager;
 
     uint256 public startTime = 0;
-    uint256 public endTime = 0;
+    uint256 public etherPriceUSD = 300;
 
     uint256 public tokensSold = 0;
 
     // TODO: dacarley: Update with real addresses.
     address public constant BLITZPREDICT_ADDRESS = 0x1234567890123456789012345678901234567890;
-    address public constant FUTURE_HIRES_ADDRESS = 0x1234567890123456789012345678901234567890;
-    address public constant TEAM_ADDRESS = 0x1234567890123456789012345678901234567890;
+    address public constant FUTURE_HIRES_ADDRESS = 0x0987654321098765432109876543210987654321;
+    address public constant TEAM_ADDRESS = 0x1234567890098765432112345678900987654321;
 
     uint256 public constant MAX_TOKENS = (10 ** 9) * (10 ** 18);
     uint256 public constant ONE_PERCENT = MAX_TOKENS / 100;
@@ -40,22 +40,28 @@ contract BPCSmartTokenSale is BaseContract, Owned {
     uint256 public constant TOKEN_SALE_TOKENS = 30 * ONE_PERCENT;
 
     uint256 public constant USD_CAP = 6 * 10**6;
-    uint256 public constant BPC_USD_EXCHANGE_RATE = USD_CAP / TOKEN_SALE_TOKENS;
-    uint256 public constant ETH_USD_EXCHANGE_RATE = 350;
-    uint256 public constant ETH_BPC_EXCHANGE_RATE = ETH_USD_EXCHANGE_RATE / BPC_USD_EXCHANGE_RATE;
 
-    event TokensPurchased(address indexed to, uint256 tokens);
+    event TokensPurchased(address indexed _to, uint256 _tokens);
 
     modifier onlyDuringSale() {
         require(tokensSold < TOKEN_SALE_TOKENS);
         require(now >= startTime);
+
+        uint256 endTime = getEndTime();
         require(now < endTime);
+
+        _;
+    }
+
+    modifier onlyBeforeSale() {
+        require(now < startTime);
 
         _;
     }
 
     modifier onlyAfterSale() {
         bool allTokensSold = tokensSold >= TOKEN_SALE_TOKENS;
+        uint256 endTime = getEndTime();
         bool afterEndTime = now >= endTime;
 
         require(allTokensSold || afterEndTime);
@@ -73,40 +79,38 @@ contract BPCSmartTokenSale is BaseContract, Owned {
 
         bpc = new BPCSmartToken();
         startTime = _startTime;
-        endTime = startTime + DURATION;
     }
 
-    /// @dev Fallback function that will delegate the request to buy tokens.
+    /// @dev Fallback function -- simply assert false
     function ()
         external
         payable
-        onlyDuringSale
     {
-        purchaseTokens();
+        assert(false);
+    }
+
+    function setEtherPriceUSD(uint256 price)
+        external
+        onlyOwner
+        onlyBeforeSale
+    {
+        etherPriceUSD = price;
     }
 
     /// @dev Finalizes the token sale event.
-    function finalize()
+    function finalizeSale()
         external
         onlyAfterSale
         onlyOwner
         onlyIf(!isFinalized)
     {
-        uint256 immediateTokens = 0 +
-            SEED_ROUND_TOKENS +
-            STRATEGIC_PARTNER_TOKENS +
-            ADVISOR_TOKENS +
-            LIQUIDITY_RESERVE_TOKENS;
+        uint256 companyIssuedTokens = getCompanyIssuedTokens();
+        uint256 vestingTokens = getVestingTokens();
 
-        uint256 vestingTokens = 0 +
-            FUTURE_HIRES_TOKENS +
-            TEAM_TOKENS +
-            BLITZPREDICT_TOKENS;
-
-        assert(immediateTokens + vestingTokens + TOKEN_SALE_TOKENS == MAX_TOKENS);
+        assert(companyIssuedTokens + vestingTokens + TOKEN_SALE_TOKENS == MAX_TOKENS);
 
         // Issue the immediate tokens to the company wallet
-        bpc.issue(BLITZPREDICT_ADDRESS, immediateTokens);
+        bpc.issue(BLITZPREDICT_ADDRESS, companyIssuedTokens);
 
         // Grant vesting grants.
         vestingManager = new VestingManager(bpc);
@@ -160,7 +164,7 @@ contract BPCSmartTokenSale is BaseContract, Owned {
     ///   1. The new owner will need to call VestingManager's acceptOwnership directly in order to accept the ownership.
     function transferVestingManagerOwnership(address newOwner)
         external
-        onlyAfterSale
+        onlyIf(isFinalized)
         onlyOwner
     {
         vestingManager.transferOwnership(newOwner);
@@ -170,10 +174,46 @@ contract BPCSmartTokenSale is BaseContract, Owned {
     /// This can be used, by the token sale contract itself to claim back ownership of the VestingManager contract.
     function acceptVestingManagerOwnership()
         external
-        onlyAfterSale
+        onlyIf(isFinalized)
         onlyOwner
     {
         vestingManager.acceptOwnership();
+    }
+
+    function getCompanyIssuedTokens()
+        public pure
+        returns (uint256)
+    {
+        return 0 +
+            SEED_ROUND_TOKENS +
+            STRATEGIC_PARTNER_TOKENS +
+            ADVISOR_TOKENS +
+            LIQUIDITY_RESERVE_TOKENS;
+    }
+
+    function getVestingTokens()
+        public pure
+        returns (uint256)
+    {
+        return 0 +
+            FUTURE_HIRES_TOKENS +
+            TEAM_TOKENS +
+            BLITZPREDICT_TOKENS;
+    }
+
+    function getEndTime()
+        public view
+        returns (uint256)
+    {
+        return startTime + DURATION;
+    }
+
+
+    function getTokensPerEther()
+        public view
+        returns (uint256)
+    {
+        return etherPriceUSD * TOKEN_SALE_TOKENS / USD_CAP;
     }
 
     /// @dev Create and sell tokens to the caller.
@@ -183,10 +223,11 @@ contract BPCSmartTokenSale is BaseContract, Owned {
         onlyDuringSale
         greaterThanZero(msg.value)
     {
-        uint256 desiredTokens = msg.value.mul(ETH_BPC_EXCHANGE_RATE);
+        uint256 tokensPerEther = getTokensPerEther();
+        uint256 desiredTokens = msg.value.mul(tokensPerEther);
         uint256 tokensRemaining = TOKEN_SALE_TOKENS.sub(tokensSold);
         uint256 tokens = SafeMath.min256(desiredTokens, tokensRemaining);
-        uint256 contribution = tokens.div(ETH_BPC_EXCHANGE_RATE);
+        uint256 contribution = tokens.div(tokensPerEther);
 
         issuePurchasedTokens(msg.sender, tokens);
         BLITZPREDICT_ADDRESS.transfer(contribution);

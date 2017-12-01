@@ -1,5 +1,6 @@
 import _ from "lodash";
 import utils from "./utils";
+import ownedTests from "./ownedTests";
 
 const TournamentManager = artifacts.require("./TournamentManager.sol");
 
@@ -252,6 +253,10 @@ contract("TournamentManager", (accounts) => {
 
             await utils.expectInvalidOpcode(promise);
         });
+    });
+
+    describe("Owned", () => {
+        ownedTests.describeTests(() => instance, accounts);
     });
 
     async function makePicks(contestId) {
