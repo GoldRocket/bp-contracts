@@ -1,184 +1,184 @@
 import utils from "./utils";
 import ownedTests from "./ownedTests.js";
 
-const BPCSmartToken = artifacts.require("./BPCSmartToken.sol");
+const BPZSmartToken = artifacts.require("./BPZSmartToken.sol");
 
-contract("BPCSmartToken", (accounts) => {
-    let bpc;
+contract("BPZSmartToken", (accounts) => {
+    let bpz;
 
     beforeEach(async () => {
-        bpc = await BPCSmartToken.new();
+        bpz = await BPZSmartToken.new();
     });
 
     describe("ERC20 interface", () => {
         beforeEach(async () => {
             // The ERC20 standard isn't aware of the possibility of disabled transfers
-            await bpc.disableTransfers(false);
+            await bpz.disableTransfers(false);
         });
 
         describe("name", () => {
             it("should return BlitzPredict as the token name", async () => {
-                const name = await bpc.name();
+                const name = await bpz.name();
                 assert.equal(name, "BlitzPredict");
             });
         });
 
         describe("symbol", () => {
             it("should return BPZ as the token symbol", async () => {
-                const symbol = await bpc.symbol();
+                const symbol = await bpz.symbol();
                 assert.equal(symbol, "BPZ");
             });
         });
 
         describe("decimals", () => {
             it("should return 18 decimals", async () => {
-                const decimals = await bpc.decimals();
+                const decimals = await bpz.decimals();
                 assert.equal(decimals, 18);
             });
         });
 
         describe("totalSupply", () => {
             it("should return 0 for the intial supply", async () => {
-                const totalSupply = await bpc.totalSupply();
+                const totalSupply = await bpz.totalSupply();
                 assert.equal(totalSupply, 0);
             });
         });
 
         describe("balanceOf", () => {
             it("should return 0 for the initial balance", async () => {
-                const balance = await bpc.balanceOf(accounts[0]);
+                const balance = await bpz.balanceOf(accounts[0]);
                 assert.equal(balance, 0);
             });
         });
 
         describe("allowance", () => {
             it("should return 0 for the initial allowance", async () => {
-                const allowance = await bpc.allowance(accounts[0], accounts[1]);
+                const allowance = await bpz.allowance(accounts[0], accounts[1]);
                 assert.equal(allowance, 0);
             });
         });
 
         describe("transfer", () => {
             it("should throw if the target address is invalid", async () => {
-                await bpc.issue(accounts[0], 100);
+                await bpz.issue(accounts[0], 100);
 
-                const promise = bpc.transfer(0, 50);
+                const promise = bpz.transfer(0, 50);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if the target address is the token contract", async () => {
-                await bpc.issue(accounts[0], 100);
+                await bpz.issue(accounts[0], 100);
 
-                const promise = bpc.transfer(bpc.address, 50);
+                const promise = bpz.transfer(bpz.address, 50);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if there's not enough to transfer", async () => {
-                await bpc.issue(accounts[0], 50);
+                await bpz.issue(accounts[0], 50);
 
-                const promise = bpc.transfer(accounts[1], 100);
+                const promise = bpz.transfer(accounts[1], 100);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should perform the transfer if there's enough balance", async () => {
-                await bpc.issue(accounts[0], 100);
+                await bpz.issue(accounts[0], 100);
 
-                await bpc.transfer(accounts[1], 25);
+                await bpz.transfer(accounts[1], 25);
 
                 await expectTransferEvent(accounts[0], accounts[1], 25);
 
-                assert.equal(await bpc.totalSupply(), 100);
-                assert.equal(await bpc.balanceOf(accounts[0]), 75);
-                assert.equal(await bpc.balanceOf(accounts[1]), 25);
+                assert.equal(await bpz.totalSupply(), 100);
+                assert.equal(await bpz.balanceOf(accounts[0]), 75);
+                assert.equal(await bpz.balanceOf(accounts[1]), 25);
             });
         });
 
         describe("transferFrom", () => {
             it("should throw if the 'from' isn't a valid address", async () => {
-                const promise = bpc.transferFrom(0, accounts[2], 50);
+                const promise = bpz.transferFrom(0, accounts[2], 50);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if the 'to' isn't a valid address", async () => {
-                await bpc.issue(accounts[0], 100);
-                await bpc.approve(accounts[1], 75);
+                await bpz.issue(accounts[0], 100);
+                await bpz.approve(accounts[1], 75);
 
-                const promise = bpc.transferFrom(accounts[0], 0, 50, {
+                const promise = bpz.transferFrom(accounts[0], 0, 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if the 'to' is the token contract", async () => {
-                await bpc.issue(accounts[0], 100);
-                await bpc.approve(accounts[1], 75);
+                await bpz.issue(accounts[0], 100);
+                await bpz.approve(accounts[1], 75);
 
-                const promise = bpc.transferFrom(accounts[0], bpc.address, 50, {
+                const promise = bpz.transferFrom(accounts[0], bpz.address, 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if there's not enough allowance", async () => {
-                await bpc.issue(accounts[0], 100);
-                await bpc.approve(accounts[1], 25);
+                await bpz.issue(accounts[0], 100);
+                await bpz.approve(accounts[1], 25);
 
-                const promise = bpc.transferFrom(accounts[0], accounts[2], 50, {
+                const promise = bpz.transferFrom(accounts[0], accounts[2], 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if the source account doesn't have enough balance", async () => {
-                await bpc.issue(accounts[0], 25);
-                await bpc.approve(accounts[1], 100);
+                await bpz.issue(accounts[0], 25);
+                await bpz.approve(accounts[1], 100);
 
-                const promise = bpc.transferFrom(accounts[0], accounts[2], 50, {
+                const promise = bpz.transferFrom(accounts[0], accounts[2], 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should successfully transfer if there's enough balance and allowance", async () => {
-                await bpc.issue(accounts[0], 100);
-                await bpc.approve(accounts[1], 25);
+                await bpz.issue(accounts[0], 100);
+                await bpz.approve(accounts[1], 25);
 
-                await bpc.transferFrom(accounts[0], accounts[2], 25, {
+                await bpz.transferFrom(accounts[0], accounts[2], 25, {
                     from: accounts[1]
                 });
 
                 await expectTransferEvent(accounts[0], accounts[2], 25);
 
-                assert.equal(await bpc.totalSupply(), 100);
-                assert.equal(await bpc.balanceOf(accounts[0]), 75);
-                assert.equal(await bpc.balanceOf(accounts[1]), 0);
-                assert.equal(await bpc.balanceOf(accounts[2]), 25);
+                assert.equal(await bpz.totalSupply(), 100);
+                assert.equal(await bpz.balanceOf(accounts[0]), 75);
+                assert.equal(await bpz.balanceOf(accounts[1]), 0);
+                assert.equal(await bpz.balanceOf(accounts[2]), 25);
             });
         });
 
         describe("approve", () => {
             it("should throw if the 'spender' is an invalid address", async () => {
-                const promise = bpc.approve(0, 100);
+                const promise = bpz.approve(0, 100);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if called twice with two non-zero values", async () => {
-                await bpc.approve(accounts[1], 100);
-                const promise = bpc.approve(accounts[1], 200);
+                await bpz.approve(accounts[1], 100);
+                const promise = bpz.approve(accounts[1], 200);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should allow resetting the allowance", async () => {
-                await bpc.approve(accounts[1], 100);
-                assert.equal(await bpc.allowance(accounts[0], accounts[1]), 100);
+                await bpz.approve(accounts[1], 100);
+                assert.equal(await bpz.allowance(accounts[0], accounts[1]), 100);
                 await expectApprovalEvent(accounts[0], accounts[1], 100);
 
-                await bpc.approve(accounts[1], 0);
-                assert.equal(await bpc.allowance(accounts[0], accounts[1]), 0);
+                await bpz.approve(accounts[1], 0);
+                assert.equal(await bpz.allowance(accounts[0], accounts[1]), 0);
                 await expectApprovalEvent(accounts[0], accounts[1], 0);
 
-                await bpc.approve(accounts[1], 200);
-                assert.equal(await bpc.allowance(accounts[0], accounts[1]), 200);
+                await bpz.approve(accounts[1], 200);
+                assert.equal(await bpz.allowance(accounts[0], accounts[1]), 200);
                 await expectApprovalEvent(accounts[0], accounts[1], 200);
             });
         });
@@ -187,14 +187,14 @@ contract("BPCSmartToken", (accounts) => {
     describe("Bancor SmartToken interface", () => {
         describe("transfersEnabled", () => {
             it("should default to false", async () => {
-                const transfersEnabled = await bpc.transfersEnabled();
+                const transfersEnabled = await bpz.transfersEnabled();
                 assert.isFalse(transfersEnabled);
             });
         });
 
         describe("NewSmartToken", () => {
-            it("should be logged when creating a new BPCSmartToken", async () => {
-                const newToken = await BPCSmartToken.new();
+            it("should be logged when creating a new BPZSmartToken", async () => {
+                const newToken = await BPZSmartToken.new();
 
                 await expectNewSmartTokenEvent(newToken);
             });
@@ -202,95 +202,95 @@ contract("BPCSmartToken", (accounts) => {
 
         describe("disableTransfer", () => {
             it("should allow disabling", async () => {
-                await bpc.disableTransfers(true);
+                await bpz.disableTransfers(true);
 
-                assert.isFalse(await bpc.transfersEnabled());
+                assert.isFalse(await bpz.transfersEnabled());
             });
 
             it("should allow enabling", async () => {
-                await bpc.disableTransfers(true);
-                await bpc.disableTransfers(false);
+                await bpz.disableTransfers(true);
+                await bpz.disableTransfers(false);
 
-                assert.isTrue(await bpc.transfersEnabled());
+                assert.isTrue(await bpz.transfersEnabled());
             });
         });
 
         describe("issue", () => {
             it("should throw if the 'to' address is invalid", async () => {
-                const promise = bpc.issue(0, 100);
+                const promise = bpz.issue(0, 100);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if the 'to' address is the token", async () => {
-                const promise = bpc.issue(bpc.address, 100);
+                const promise = bpz.issue(bpz.address, 100);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should issue tokens", async () => {
-                await bpc.issue(accounts[1], 100);
+                await bpz.issue(accounts[1], 100);
 
                 await expectIssuanceEvent(100);
-                await expectTransferEvent(bpc.address, accounts[1], 100, { logIndex: 1 });
-                assert.equal(await bpc.balanceOf(accounts[1]), 100);
-                assert.equal(await bpc.totalSupply(), 100);
+                await expectTransferEvent(bpz.address, accounts[1], 100, { logIndex: 1 });
+                assert.equal(await bpz.balanceOf(accounts[1]), 100);
+                assert.equal(await bpz.totalSupply(), 100);
             });
         });
 
         describe("destroy", () => {
             it("should throw if trying to destroy someone else's tokens", async () => {
-                await bpc.issue(accounts[2], 100);
-                const promise = bpc.destroy(accounts[2], 50, {
+                await bpz.issue(accounts[2], 100);
+                const promise = bpz.destroy(accounts[2], 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should throw if trying to destroy more than the 'from' account's balance", async () => {
-                await bpc.issue(accounts[0], 50);
-                const promise = bpc.destroy(accounts[0], 100);
+                await bpz.issue(accounts[0], 50);
+                const promise = bpz.destroy(accounts[0], 100);
                 await utils.expectInvalidOpcode(promise);
             });
 
             it("should allow the caller to destroy their own tokens", async () => {
-                await bpc.issue(accounts[1], 100);
-                await bpc.destroy(accounts[1], 100, {
+                await bpz.issue(accounts[1], 100);
+                await bpz.destroy(accounts[1], 100, {
                     from: accounts[1]
                 });
 
-                await expectTransferEvent(accounts[1], bpc.address, 100);
+                await expectTransferEvent(accounts[1], bpz.address, 100);
                 await expectDestructionEvent(100, { logIndex: 1 });
 
-                assert.equal(await bpc.balanceOf(accounts[1]), 0);
-                assert.equal(await bpc.totalSupply(), 0);
+                assert.equal(await bpz.balanceOf(accounts[1]), 0);
+                assert.equal(await bpz.totalSupply(), 0);
             });
 
             it("should allow the token owner to destroy someone else's tokens", async () => {
-                await bpc.issue(accounts[1], 100);
-                await bpc.destroy(accounts[1], 100);
+                await bpz.issue(accounts[1], 100);
+                await bpz.destroy(accounts[1], 100);
 
-                await expectTransferEvent(accounts[1], bpc.address, 100);
+                await expectTransferEvent(accounts[1], bpz.address, 100);
                 await expectDestructionEvent(100, { logIndex: 1 });
 
-                assert.equal(await bpc.balanceOf(accounts[1]), 0);
-                assert.equal(await bpc.totalSupply(), 0);
+                assert.equal(await bpz.balanceOf(accounts[1]), 0);
+                assert.equal(await bpz.totalSupply(), 0);
             });
         });
 
         describe("transfer", () => {
             it("should throw if transfers are disabled", async () => {
-                await bpc.issue(accounts[0], 100);
+                await bpz.issue(accounts[0], 100);
 
-                const promise = bpc.transfer(accounts[1], 25);
+                const promise = bpz.transfer(accounts[1], 25);
                 await utils.expectInvalidOpcode(promise);
             });
         });
 
         describe("transferFrom", () => {
             it("should throw if transfers are disabled", async () => {
-                await bpc.issue(accounts[0], 100);
-                await bpc.approve(accounts[1], 75);
+                await bpz.issue(accounts[0], 100);
+                await bpz.approve(accounts[1], 75);
 
-                const promise = bpc.transferFrom(accounts[0], accounts[2], 50, {
+                const promise = bpz.transferFrom(accounts[0], accounts[2], 50, {
                     from: accounts[1]
                 });
                 await utils.expectInvalidOpcode(promise);
@@ -299,11 +299,11 @@ contract("BPCSmartToken", (accounts) => {
     });
 
     describe("Owned", () => {
-        ownedTests.describeTests(() => bpc, accounts);
+        ownedTests.describeTests(() => bpz, accounts);
     });
 
     async function expectTransferEvent(from, to, value, filter = {}) {
-        await utils.expectEvent(bpc, {
+        await utils.expectEvent(bpz, {
             event: "Transfer",
             logIndex: 0,
             args: {
@@ -316,7 +316,7 @@ contract("BPCSmartToken", (accounts) => {
     }
 
     async function expectApprovalEvent(owner, spender, value, filter = {}) {
-        await utils.expectEvent(bpc, {
+        await utils.expectEvent(bpz, {
             event: "Approval",
             logIndex: 0,
             args: {
@@ -340,7 +340,7 @@ contract("BPCSmartToken", (accounts) => {
     }
 
     async function expectIssuanceEvent(amount, filter = {}) {
-        await utils.expectEvent(bpc, {
+        await utils.expectEvent(bpz, {
             event: "Issuance",
             logIndex: 0,
             args: {
@@ -351,7 +351,7 @@ contract("BPCSmartToken", (accounts) => {
     }
 
     async function expectDestructionEvent(amount, filter = {}) {
-        await utils.expectEvent(bpc, {
+        await utils.expectEvent(bpz, {
             event: "Destruction",
             logIndex: 0,
             args: {

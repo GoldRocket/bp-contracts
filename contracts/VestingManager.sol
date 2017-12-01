@@ -2,15 +2,15 @@ pragma solidity 0.4.18;
 
 import "./common/Owned.sol";
 import "./common/SafeMath.sol";
-import "./BPCSmartToken.sol";
+import "./BPZSmartToken.sol";
 
 // solhint-disable not-rely-on-time
 
 contract VestingManager is Owned {
     using SafeMath for uint256;
 
-    // The BPC smart token instance
-    BPCSmartToken public bpc;
+    // The BPZ smart token instance
+    BPZSmartToken public bpz;
 
     struct Grant {
         uint256 value;
@@ -29,14 +29,14 @@ contract VestingManager is Owned {
     event VestedTokensClaimed(address indexed holder, uint256 value);
     event GrantRevoked(address indexed holder, uint256 refund);
 
-    /// @dev Constructor that initializes the address of the BPCSmartToken contract.
-    /// @param _bpc BPCSmartToken The address of the previously deployed BPCSmartToken smart contract.
-    function VestingManager(BPCSmartToken _bpc)
+    /// @dev Constructor that initializes the address of the BPZSmartToken contract.
+    /// @param _bpc BPZSmartToken The address of the previously deployed BPZSmartToken smart contract.
+    function VestingManager(BPZSmartToken _bpc)
         public
     {
         require(_bpc != address(0));
 
-        bpc = _bpc;
+        bpz = _bpc;
     }
 
     /// @dev Grant tokens to a specified address.
@@ -55,9 +55,9 @@ contract VestingManager is Owned {
         // Make sure that a single address can be granted tokens only once.
         require(grants[_to].value == 0);
 
-        // Check that we have enough BPC balance to manage this grant.
+        // Check that we have enough BPZ balance to manage this grant.
         totalVesting = totalVesting.add(_value);
-        require(totalVesting <= bpc.balanceOf(address(this)));
+        require(totalVesting <= bpz.balanceOf(address(this)));
 
         grants[_to] = Grant({
             value: _value,
@@ -78,14 +78,14 @@ contract VestingManager is Owned {
     {
         Grant storage grant = grants[_holder];
 
-        // Send the remaining BPC back to the owner.
+        // Send the remaining BPZ back to the owner.
         uint256 refund = grant.value.sub(grant.claimed);
 
         // Remove the grant.
         delete grants[_holder];
 
         totalVesting = totalVesting.sub(refund);
-        bpc.transfer(owner, refund);
+        bpz.transfer(owner, refund);
 
         GrantRevoked(_holder, refund);
     }
@@ -140,7 +140,7 @@ contract VestingManager is Owned {
 
         grant.claimed = grant.claimed.add(claimable);
         totalVesting = totalVesting.sub(claimable);
-        bpc.transfer(msg.sender, claimable);
+        bpz.transfer(msg.sender, claimable);
 
         VestedTokensClaimed(msg.sender, claimable);
 

@@ -2,41 +2,41 @@ import moment from "moment";
 import utils from "./utils";
 import ownedTests from "./ownedTests.js";
 
-const BPCSmartToken = artifacts.require("./BPCSmartToken.sol");
-const BPCSmartTokenSale = artifacts.require("./BPCSmartTokenSale.sol");
-const BPCSmartTokenSaleTestHarness = artifacts.require("./BPCSmartTokenSaleTestHarness.sol");
+const BPZSmartToken = artifacts.require("./BPZSmartToken.sol");
+const BPZSmartTokenSale = artifacts.require("./BPZSmartTokenSale.sol");
+const BPZSmartTokenSaleTestHarness = artifacts.require("./BPZSmartTokenSaleTestHarness.sol");
 const VestingManager = artifacts.require("./VestingManager.sol");
 
 const solidityYears = 365 * 24 * 60 * 60;
 
-contract("BPCSmartTokenSale", (accounts) => {
+contract("BPZSmartTokenSale", (accounts) => {
     let testHarness;
     let tokenSale;
 
     beforeEach(async () => {
-        testHarness = await BPCSmartTokenSaleTestHarness.new(moment().add(1, "minute").unix());
-        tokenSale = BPCSmartTokenSale.at(testHarness.address);
+        testHarness = await BPZSmartTokenSaleTestHarness.new(moment().add(1, "minute").unix());
+        tokenSale = BPZSmartTokenSale.at(testHarness.address);
     });
 
     describe("constructor", () => {
         it("should fail if the start time is not specified", async () => {
-            const promise = BPCSmartTokenSale.new();
+            const promise = BPZSmartTokenSale.new();
             await utils.expectInvalidOpcode(promise);
         });
 
         it("should fail if the start time is before 'now'", async () => {
-            const promise = BPCSmartTokenSale.new(moment().subtract(1, "second").unix());
+            const promise = BPZSmartTokenSale.new(moment().subtract(1, "second").unix());
             await utils.expectInvalidOpcode(promise);
         });
 
         it("should succeed if the start time is after 'now'", async () => {
             const startTime = moment().add(1, "second").unix();
-            const instance = await BPCSmartTokenSale.new(startTime);
+            const instance = await BPZSmartTokenSale.new(startTime);
 
             const duration = web3.toDecimal(await instance.DURATION());
             const expectedEndTime = startTime + duration;
 
-            assert.notEqual(await instance.bpc(), "0x0");
+            assert.notEqual(await instance.bpz(), "0x0");
             assert.equal(await instance.startTime(), startTime);
             assert.equal(await instance.getEndTime(), expectedEndTime);
         });
@@ -106,11 +106,11 @@ contract("BPCSmartTokenSale", (accounts) => {
         });
 
         it("should throw if the token sale no longer owns the token", async () => {
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
 
             await buyAllTokens();
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
-            await bpc.acceptOwnership({
+            await bpz.acceptOwnership({
                 from: accounts[1]
             });
 
@@ -119,26 +119,26 @@ contract("BPCSmartTokenSale", (accounts) => {
         });
 
         it("should issue the right number of tokens to the company", async () => {
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
 
             await buyAllTokens();
             await tokenSale.finalizeSale();
 
             const companyAddress = await tokenSale.BLITZPREDICT_ADDRESS();
-            const companyBalance = web3.toDecimal(await bpc.balanceOf(companyAddress));
+            const companyBalance = web3.toDecimal(await bpz.balanceOf(companyAddress));
             const expectedCompanyBalance = web3.toDecimal(await tokenSale.getCompanyIssuedTokens());
             assert.equal(companyBalance, expectedCompanyBalance);
         });
 
         it("should issue the right number of tokens to vesting manager", async () => {
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
 
             await buyAllTokens();
             await tokenSale.finalizeSale();
 
             const vestingManager = VestingManager.at(await tokenSale.vestingManager());
 
-            const vestingManagerBalance = web3.toDecimal(await bpc.balanceOf(vestingManager.address));
+            const vestingManagerBalance = web3.toDecimal(await bpz.balanceOf(vestingManager.address));
             const expectedVestingManagerBalance = web3.toDecimal(await tokenSale.getVestingTokens());
             assert.equal(vestingManagerBalance, expectedVestingManagerBalance);
         });
@@ -182,13 +182,13 @@ contract("BPCSmartTokenSale", (accounts) => {
         });
 
         it("should enable transfers on the token", async () => {
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            assert.isFalse(await bpc.transfersEnabled());
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            assert.isFalse(await bpz.transfersEnabled());
 
             await buyAllTokens();
             await tokenSale.finalizeSale();
 
-            assert.isTrue(await bpc.transfersEnabled());
+            assert.isTrue(await bpz.transfersEnabled());
         });
 
         async function verifyGrant(params) {
@@ -224,8 +224,8 @@ contract("BPCSmartTokenSale", (accounts) => {
         it("should throw if the token ownership has already been transferred", async () => {
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            await bpc.acceptOwnership({
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            await bpz.acceptOwnership({
                 from: accounts[1]
             });
 
@@ -241,24 +241,24 @@ contract("BPCSmartTokenSale", (accounts) => {
         it("should allow a complete transfer of ownership", async () => {
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            await bpc.acceptOwnership({
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            await bpz.acceptOwnership({
                 from: accounts[1]
             });
 
-            assert.equal(await bpc.owner(), accounts[1]);
+            assert.equal(await bpz.owner(), accounts[1]);
         });
 
         it("should allow a second transfer if the first one has not yet been accepted", async () => {
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
             await tokenSale.transferSmartTokenOwnership(accounts[2]);
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            await bpc.acceptOwnership({
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            await bpz.acceptOwnership({
                 from: accounts[2]
             });
 
-            assert.equal(await bpc.owner(), accounts[2]);
+            assert.equal(await bpz.owner(), accounts[2]);
         });
     });
 
@@ -278,8 +278,8 @@ contract("BPCSmartTokenSale", (accounts) => {
         it("should throw if the transfer has not yet been scheduled", async () => {
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            await bpc.acceptOwnership({
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            await bpz.acceptOwnership({
                 from: accounts[1]
             });
 
@@ -290,18 +290,18 @@ contract("BPCSmartTokenSale", (accounts) => {
         it("should successfully accept ownership", async () => {
             await tokenSale.transferSmartTokenOwnership(accounts[1]);
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            await bpc.acceptOwnership({
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            await bpz.acceptOwnership({
                 from: accounts[1]
             });
 
-            await bpc.transferOwnership(tokenSale.address, {
+            await bpz.transferOwnership(tokenSale.address, {
                 from: accounts[1]
             });
 
             await tokenSale.acceptSmartTokenOwnership();
 
-            assert.equal(await bpc.owner(), tokenSale.address);
+            assert.equal(await bpz.owner(), tokenSale.address);
         });
     });
 
@@ -512,8 +512,8 @@ contract("BPCSmartTokenSale", (accounts) => {
                 value: 1
             });
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            const balance = web3.toDecimal(await bpc.balanceOf(accounts[1]));
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            const balance = web3.toDecimal(await bpz.balanceOf(accounts[1]));
 
             assert.equal(balance, oneHundred);
         });
@@ -544,8 +544,8 @@ contract("BPCSmartTokenSale", (accounts) => {
                 value: 1
             });
 
-            const bpc = BPCSmartToken.at(await tokenSale.bpc());
-            const balance = web3.toDecimal(await bpc.balanceOf(accounts[2]));
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            const balance = web3.toDecimal(await bpz.balanceOf(accounts[2]));
 
             assert.equal(balance, oneHundred);
         });
@@ -594,10 +594,10 @@ contract("BPCSmartTokenSale", (accounts) => {
             value: 1
         });
 
-        const bpc = BPCSmartToken.at(await tokenSale.bpc());
+        const bpz = BPZSmartToken.at(await tokenSale.bpz());
 
         // Ensure that we actually bought all the tokens.
-        const balance = web3.toDecimal(await bpc.balanceOf(accounts[1]));
+        const balance = web3.toDecimal(await bpz.balanceOf(accounts[1]));
         const tokenSaleTokens = web3.toDecimal(await tokenSale.TOKEN_SALE_TOKENS());
         const tokensSold = web3.toDecimal(await tokenSale.tokensSold());
 
