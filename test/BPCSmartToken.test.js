@@ -1,4 +1,5 @@
 import utils from "./utils";
+import ownedTests from "./ownedTests.js";
 
 const BPCSmartToken = artifacts.require("./BPCSmartToken.sol");
 
@@ -298,62 +299,7 @@ contract("BPCSmartToken", (accounts) => {
     });
 
     describe("Owned", () => {
-        describe("owner", () => {
-            it("should be the account that created the contract", async () => {
-                const owner = await bpc.owner();
-                assert.equal(owner, accounts[0]);
-            });
-        });
-
-        describe("newOwner", () => {
-            it("should default to the 0 address", async () => {
-                const newOwner = await bpc.newOwner();
-                assert.equal(newOwner, 0);
-            });
-        });
-
-        describe("transferOwnership", () => {
-            it("should throw if called by anyone but the owner", async () => {
-                const promise = bpc.transferOwnership(accounts[2], {
-                    from: accounts[1]
-                });
-                await utils.expectInvalidOpcode(promise);
-            });
-
-            it("should throw if trying to transfer ownership to the current owner", async () => {
-                const promise = bpc.transferOwnership(accounts[0]);
-                await utils.expectInvalidOpcode(promise);
-            });
-
-            it("should allow the owner to transfer ownership", async () => {
-                await bpc.transferOwnership(accounts[1]);
-                assert.equal(await bpc.owner(), accounts[0]);
-                assert.equal(await bpc.newOwner(), accounts[1]);
-            });
-        });
-
-        describe("acceptOwnership", () => {
-            it("should throw if the caller is not the new owner", async () => {
-                await bpc.transferOwnership(accounts[1]);
-
-                const promise = bpc.acceptOwnership({
-                    from: accounts[2]
-                });
-                await utils.expectInvalidOpcode(promise);
-            });
-
-            it("should transfer ownership to the new owner", async () => {
-                await bpc.transferOwnership(accounts[1]);
-
-                await bpc.acceptOwnership({
-                    from: accounts[1]
-                });
-
-                await expectOwnerUpdateEvent(accounts[0], accounts[1]);
-                assert.equal(await bpc.owner(), accounts[1]);
-                assert.equal(await bpc.newOwner(), 0);
-            });
-        });
+        ownedTests.describeTests(() => bpc, accounts);
     });
 
     async function expectTransferEvent(from, to, value, filter = {}) {
@@ -410,18 +356,6 @@ contract("BPCSmartToken", (accounts) => {
             logIndex: 0,
             args: {
                 _amount: new web3.BigNumber(amount)
-            },
-            ...filter
-        });
-    }
-
-    async function expectOwnerUpdateEvent(prevOwner, newOwner, filter = {}) {
-        await utils.expectEvent(bpc, {
-            event: "OwnerUpdate",
-            logIndex: 0,
-            args: {
-                _prevOwner: prevOwner,
-                _newOwner: newOwner
             },
             ...filter
         });
