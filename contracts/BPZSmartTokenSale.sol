@@ -2,20 +2,20 @@ pragma solidity 0.4.18;
 
 import "./common/BaseContract.sol";
 import "./common/Owned.sol";
-import "./BPCSmartToken.sol";
+import "./BPZSmartToken.sol";
 import "./VestingManager.sol";
 
 // solhint-disable not-rely-on-time
 
 /// @title BPC Smart Token sale
-contract BPCSmartTokenSale is BaseContract, Owned {
+contract BPZSmartTokenSale is BaseContract, Owned {
     using SafeMath for uint256;
 
     uint256 public constant DURATION = 14 days;
 
     bool public isFinalized = false;
 
-    BPCSmartToken public bpc;
+    BPZSmartToken public bpz;
     VestingManager public vestingManager;
 
     uint256 public startTime = 0;
@@ -71,13 +71,13 @@ contract BPCSmartTokenSale is BaseContract, Owned {
 
     /// @dev Constructor that initializes the sale conditions.
     /// @param _startTime uint256 The start time of the token sale.
-    function BPCSmartTokenSale(uint256 _startTime)
+    function BPZSmartTokenSale(uint256 _startTime)
         public
         onlyIf(_startTime > now)
     {
         assert(tokenCountsAreValid());
 
-        bpc = new BPCSmartToken();
+        bpz = new BPZSmartToken();
         startTime = _startTime;
     }
 
@@ -110,11 +110,11 @@ contract BPCSmartTokenSale is BaseContract, Owned {
         assert(companyIssuedTokens + vestingTokens + TOKEN_SALE_TOKENS == MAX_TOKENS);
 
         // Issue the immediate tokens to the company wallet
-        bpc.issue(BLITZPREDICT_ADDRESS, companyIssuedTokens);
+        bpz.issue(BLITZPREDICT_ADDRESS, companyIssuedTokens);
 
         // Grant vesting grants.
-        vestingManager = new VestingManager(bpc);
-        bpc.issue(vestingManager, vestingTokens);
+        vestingManager = new VestingManager(bpz);
+        bpz.issue(vestingManager, vestingTokens);
 
         uint256 oneYear = now.add(1 years);
         uint256 twoYears = now.add(2 years);
@@ -125,28 +125,28 @@ contract BPCSmartTokenSale is BaseContract, Owned {
         vestingManager.grantTokens(BLITZPREDICT_ADDRESS, BLITZPREDICT_TOKENS, oneYear, twoYears);
 
         // Re-enable transfers after the token sale.
-        bpc.disableTransfers(false);
+        bpz.disableTransfers(false);
 
         isFinalized = true;
     }
 
-    /// @dev Proposes to transfer control of the BPCSmartToken contract to a new owner.
+    /// @dev Proposes to transfer control of the BPZSmartToken contract to a new owner.
     /// @param newOwner address The address to transfer ownership to.
     ///
     /// Notes:
-    ///   1. The new owner will need to call BPCSmartToken's acceptOwnership directly in order to accept the ownership.
+    ///   1. The new owner will need to call BPZSmartToken's acceptOwnership directly in order to accept the ownership.
     ///   2. Calling this method during the token sale will prevent the token sale to continue, since only the owner of
-    ///      the BPCSmartToken contract can issue new tokens.
+    ///      the BPZSmartToken contract can issue new tokens.
     ///    3. Due to #2, calling this method effectively pauses the token sale.
     function transferSmartTokenOwnership(address newOwner)
         external
         onlyOwner
     {
-        bpc.transferOwnership(newOwner);
+        bpz.transferOwnership(newOwner);
     }
 
-    /// @dev Accepts new ownership on behalf of the BPCSmartToken contract. This can be used, by the token sale
-    /// contract itself to claim back ownership of the BPCSmartToken contract.
+    /// @dev Accepts new ownership on behalf of the BPZSmartToken contract. This can be used, by the token sale
+    /// contract itself to claim back ownership of the BPZSmartToken contract.
     ///
     /// Notes:
     ///   1. This method must be called to "un-pause" the token sale after a call to transferSmartTokenOwnership
@@ -154,7 +154,7 @@ contract BPCSmartTokenSale is BaseContract, Owned {
         external
         onlyOwner
     {
-        bpc.acceptOwnership();
+        bpz.acceptOwnership();
     }
 
     /// @dev Proposes to transfer control of the VestingManager contract to a new owner.
@@ -248,7 +248,7 @@ contract BPCSmartTokenSale is BaseContract, Owned {
     {
         tokensSold = tokensSold.add(_tokens);
 
-        bpc.issue(_recipient, _tokens);
+        bpz.issue(_recipient, _tokens);
 
         TokensPurchased(_recipient, _tokens);
     }

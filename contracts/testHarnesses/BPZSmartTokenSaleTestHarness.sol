@@ -1,11 +1,11 @@
 pragma solidity 0.4.18;
 
-import "../BPCSmartTokenSale.sol";
+import "../BPZSmartTokenSale.sol";
 
-contract BPCSmartTokenSaleTestHarness is BPCSmartTokenSale {
-    function BPCSmartTokenSaleTestHarness(uint256 startTime)
+contract BPZSmartTokenSaleTestHarness is BPZSmartTokenSale {
+    function BPZSmartTokenSaleTestHarness(uint256 startTime)
         public
-        BPCSmartTokenSale(startTime)
+        BPZSmartTokenSale(startTime)
     {
         startTime; // make solhint be quiet about empty function.
     }
