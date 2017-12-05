@@ -7,14 +7,14 @@ contract BaseContract {
         _;
     }
 
-    modifier nonZero(uint256 _amount) {
-        require(_amount != 0);
+    modifier isZero(uint256 _amount) {
+        require(_amount == 0);
 
         _;
     }
 
-    modifier validIndex(uint256 arrayLength, uint256 index) {
-        requireValidIndex(arrayLength, index);
+    modifier nonZero(uint256 _amount) {
+        require(_amount != 0);
 
         _;
     }
@@ -25,8 +25,26 @@ contract BaseContract {
         _;
     }
 
+    modifier onlyIf(bool condition) {
+        require(condition);
+
+        _;
+    }
+
+    modifier validIndex(uint256 arrayLength, uint256 index) {
+        requireValidIndex(arrayLength, index);
+
+        _;
+    }
+
     modifier validAddress(address _address) {
         require(_address != 0x0);
+
+        _;
+    }
+
+    modifier validString(string value) {
+        require(bytes(value).length > 0);
 
         _;
     }
@@ -36,18 +54,6 @@ contract BaseContract {
     modifier validParamData(uint256 numParams) {
         uint256 expectedDataLength = (numParams * 32) + 4;
         assert(msg.data.length == expectedDataLength);
-
-        _;
-    }
-
-    modifier onlyIf(bool condition) {
-        require(condition);
-
-        _;
-    }
-
-    modifier onlyValidString(string value) {
-        require(bytes(value).length > 0);
 
         _;
     }

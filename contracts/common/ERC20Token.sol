@@ -26,8 +26,8 @@ contract ERC20Token is BaseContract {
     /// @param _decimals    decimal points, for display purposes
     function ERC20Token(string _name, string _symbol, uint8 _decimals)
         internal
-        onlyValidString(_name)
-        onlyValidString(_symbol)
+        validString(_name)
+        validString(_symbol)
     {
         name = _name;
         symbol = _symbol;
