@@ -6,7 +6,7 @@ import "./BPZSmartToken.sol";
 
 // solhint-disable not-rely-on-time
 
-contract VestingManager is Owned {
+contract VestingManager is BaseContract, Owned {
     using SafeMath for uint256;
 
     // The BPZ smart token instance
@@ -44,24 +44,22 @@ contract VestingManager is Owned {
     /// @param _value uint256 The amount of tokens to be granted.
     /// @param _cliff uint256 The end of the cliff period.
     /// @param _end uint256 The end of the vesting period.
-    function grantTokens(address _to, uint256 _value, uint256 _cliff, uint256 _end)
+    function grantTokens(address _to, uint256 _value, uint256 _start, uint256 _cliff, uint256 _end)
         public
         onlyOwner
+        validAddress(_to)
+        greaterThanZero(_value)
+        onlyIf(_start <= _cliff)
+        onlyIf(_cliff <= _end)
+        isZero(grants[_to].value)
     {
-        require(_to != address(0));
-        require(_value > 0);
-        require(now <= _cliff && _cliff <= _end);
-
-        // Make sure that a single address can be granted tokens only once.
-        require(grants[_to].value == 0);
-
         // Check that we have enough BPZ balance to manage this grant.
         totalVesting = totalVesting.add(_value);
         require(totalVesting <= bpz.balanceOf(address(this)));
 
         grants[_to] = Grant({
             value: _value,
-            start: now,
+            start: _start,
             cliff: _cliff,
             end: _end,
             claimed: 0
@@ -75,6 +73,7 @@ contract VestingManager is Owned {
     function revokeGrant(address _holder)
         public
         onlyOwner
+        greaterThanZero(grants[_holder].value)
     {
         Grant storage grant = grants[_holder];
 
@@ -95,8 +94,7 @@ contract VestingManager is Owned {
     /// @param _time uint256 The specific time.
     /// @return a uint256 representing a holder's total amount of vested tokens.
     function getVestedTokens(address _holder, uint256 _time)
-        public
-        constant
+        public view
         returns (uint256)
     {
         Grant storage grant = grants[_holder];
@@ -108,8 +106,7 @@ contract VestingManager is Owned {
     }
 
     function getClaimableTokens(address _holder, uint256 _time)
-        public
-        constant
+        public view
         returns (uint256)
     {
         Grant storage grant = grants[_holder];
@@ -129,15 +126,13 @@ contract VestingManager is Owned {
         public
         returns (uint256)
     {
-        Grant storage grant = grants[msg.sender];
-        require(grant.value != 0);
-
         uint256 claimable = getClaimableTokens(msg.sender, now);
 
         if (claimable == 0) {
             return 0;
         }
 
+        Grant storage grant = grants[msg.sender];
         grant.claimed = grant.claimed.add(claimable);
         totalVesting = totalVesting.sub(claimable);
         bpz.transfer(msg.sender, claimable);
@@ -166,8 +161,7 @@ contract VestingManager is Owned {
     ///   +===+===========+---------+----------> time
     ///     Start       Cliff      End
     function calculateVestedTokens(Grant _grant, uint256 _time)
-        private
-        pure
+        private pure
         returns (uint256)
     {
         if (_time < _grant.cliff) {
