@@ -99,7 +99,7 @@ contract("VestingManager", (accounts) => {
         fourYears = now + (4 * solidityYears);
     });
 
-    describe("constructor", () => {
+    describe("constructor()", () => {
         it("should throw if the bpz address is zero", async () => {
             const promise = VestingManager.new(0);
             await utils.expectInvalidOpcode(promise);
@@ -110,7 +110,7 @@ contract("VestingManager", (accounts) => {
         });
     });
 
-    describe("grantTokens", () => {
+    describe("grantTokens()", () => {
         it("should throw if called by anyone but the owner", async () => {
             await bpz.issue(vestingManager.address, 1000);
             const promise = vestingManager.grantTokens(accounts[2], 100, now, oneYear, twoYears, {
@@ -186,91 +186,7 @@ contract("VestingManager", (accounts) => {
         });
     });
 
-    describe("revokeGrant", () => {
-        it("should throw if called by anyone but the owner", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await vestingManager.grantTokens(accounts[1], 100, now, oneYear, twoYears);
-
-            const promise = vestingManager.revokeGrant(accounts[1], {
-                from: accounts[2]
-            });
-            await utils.expectInvalidOpcode(promise);
-        });
-
-        it("should throw if the 'holder' has no grant", async () => {
-            const promise = vestingManager.revokeGrant(accounts[1]);
-            await utils.expectInvalidOpcode(promise);
-        });
-
-        it("should throw if transfers have been disabled on the token", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await bpz.disableTransfers(true);
-            await vestingManager.grantTokens(accounts[1], 100, now, oneYear, twoYears);
-
-            const promise = vestingManager.revokeGrant(accounts[1]);
-            await utils.expectInvalidOpcode(promise);
-        });
-
-        it("should refund the entire grant if none has been claimed", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await vestingManager.grantTokens(accounts[1], 100, now, oneYear, twoYears);
-
-            await vestingManager.revokeGrant(accounts[1]);
-
-            await verifyGrant(accounts[1], {
-                value: 0,
-                start: 0,
-                cliff: 0,
-                end: 0,
-                claimed: 0
-            });
-
-            await verifyBalance(accounts[0], 100);
-        });
-
-        it("should update the 'totalVesting' amount", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await vestingManager.grantTokens(accounts[1], 100, now, oneYear, twoYears);
-
-            await vestingManager.revokeGrant(accounts[1]);
-
-            assert.equal(await vestingManager.totalVesting(), 0);
-        });
-
-        it("should refund the unclaimed portion of the grant", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await vestingManager.grantTokens(accounts[1], 100, oneYearAgo, now, oneYear);
-
-            assert.equal(await bpz.balanceOf(accounts[1]), 0);
-            await vestingManager.claimVestedTokens({
-                from: accounts[1]
-            });
-
-            await vestingManager.revokeGrant(accounts[1]);
-
-            await verifyGrant(accounts[1], {
-                value: 0,
-                start: 0,
-                cliff: 0,
-                end: 0,
-                claimed: 0
-            });
-
-            await verifyBalance(accounts[0], 50);
-            await verifyBalance(accounts[1], 50);
-        });
-
-        it("should fire the 'GrantRevoked' event", async () => {
-            await bpz.issue(vestingManager.address, 1000);
-            await vestingManager.grantTokens(accounts[1], 100, now, oneYear, twoYears);
-
-            await vestingManager.revokeGrant(accounts[1]);
-
-            await expectGrantRevokedEvent(accounts[1], 100);
-        });
-    });
-
-    describe("getVestedTokens", () => {
+    describe("getVestedTokens()", () => {
         it("should return 0 if the holder has no grant", async () => {
             const vestedTokens = await vestingManager.getVestedTokens(accounts[1], now);
             assert.equal(web3.toDecimal(vestedTokens), 0);
@@ -288,7 +204,7 @@ contract("VestingManager", (accounts) => {
         });
     });
 
-    describe("getClaimableTokens", () => {
+    describe("getClaimableTokens()", () => {
         it("should return 0 if the holder has no grant", async () => {
             const vestedTokens = await vestingManager.getClaimableTokens(accounts[1], now);
             assert.equal(web3.toDecimal(vestedTokens), 0);
@@ -318,7 +234,7 @@ contract("VestingManager", (accounts) => {
         });
     });
 
-    describe("claimVestedTokens", () => {
+    describe("claimVestedTokens()", () => {
         it("should do nothing if the caller has no vested tokens", async () => {
             await bpz.issue(vestingManager.address, 100);
             await vestingManager.grantTokens(accounts[1], 100, now, oneYear, fourYears);
@@ -421,7 +337,7 @@ contract("VestingManager", (accounts) => {
         });
     });
 
-    describe("Owned", () => {
+    describe("Owned:", () => {
         ownedTests.describeTests(() => vestingManager, accounts);
     });
 

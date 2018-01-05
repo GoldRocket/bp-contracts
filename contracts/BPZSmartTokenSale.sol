@@ -2,16 +2,17 @@ pragma solidity 0.4.18;
 
 import "./common/BaseContract.sol";
 import "./common/Owned.sol";
+import "./common/TokenRetriever.sol";
 import "./BPZSmartToken.sol";
 import "./VestingManager.sol";
 
 // solhint-disable not-rely-on-time
 
 /// @title BPC Smart Token sale
-contract BPZSmartTokenSale is BaseContract, Owned {
+contract BPZSmartTokenSale is BaseContract, Owned, TokenRetriever {
     using SafeMath for uint256;
 
-    uint256 public constant DURATION = 14 days;
+    uint256 public constant DURATION = 31 days;
 
     bool public isFinalized = false;
 
@@ -19,7 +20,7 @@ contract BPZSmartTokenSale is BaseContract, Owned {
     VestingManager public vestingManager;
 
     uint256 public startTime = 0;
-    uint256 public etherPriceUSD = 300;
+    uint256 public tokensPerEther = 25000;
 
     uint256 public tokensSold = 0;
 
@@ -37,9 +38,8 @@ contract BPZSmartTokenSale is BaseContract, Owned {
     uint256 public constant FUTURE_HIRES_TOKENS = 9 * ONE_PERCENT;
     uint256 public constant TEAM_TOKENS = 18 * ONE_PERCENT;
     uint256 public constant BLITZPREDICT_TOKENS = 20 * ONE_PERCENT;
-    uint256 public constant TOKEN_SALE_TOKENS = 30 * ONE_PERCENT;
-
-    uint256 public constant USD_CAP = 6 * 10**6;
+    uint256 public constant PRE_SALE_TOKENS = 15 * ONE_PERCENT;
+    uint256 public constant TOKEN_SALE_TOKENS = 15 * ONE_PERCENT;
 
     event TokensPurchased(address indexed _to, uint256 _tokens);
 
@@ -89,12 +89,12 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         assert(false);
     }
 
-    function setEtherPriceUSD(uint256 price)
+    function setTokensPerEther(uint256 _tokensPerEther)
         external
         onlyOwner
         onlyBeforeSale
     {
-        etherPriceUSD = price;
+        tokensPerEther = _tokensPerEther;
     }
 
     /// @dev Finalizes the token sale event.
@@ -126,6 +126,10 @@ contract BPZSmartTokenSale is BaseContract, Owned {
 
         // Re-enable transfers after the token sale.
         bpz.disableTransfers(false);
+
+        // Permanently disable issuance and destruction
+        bpz.disableIssuance();
+        bpz.disableDestruction();
 
         isFinalized = true;
     }
@@ -188,7 +192,8 @@ contract BPZSmartTokenSale is BaseContract, Owned {
             SEED_ROUND_TOKENS +
             STRATEGIC_PARTNER_TOKENS +
             ADVISOR_TOKENS +
-            LIQUIDITY_RESERVE_TOKENS;
+            LIQUIDITY_RESERVE_TOKENS +
+            PRE_SALE_TOKENS;
     }
 
     function getVestingTokens()
@@ -208,14 +213,6 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         return startTime + DURATION;
     }
 
-
-    function getTokensPerEther()
-        public view
-        returns (uint256)
-    {
-        return etherPriceUSD * TOKEN_SALE_TOKENS / USD_CAP;
-    }
-
     /// @dev Create and sell tokens to the caller.
     function purchaseTokens()
         public
@@ -223,7 +220,6 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         onlyDuringSale
         greaterThanZero(msg.value)
     {
-        uint256 tokensPerEther = getTokensPerEther();
         uint256 desiredTokens = msg.value.mul(tokensPerEther);
         uint256 tokensRemaining = TOKEN_SALE_TOKENS.sub(tokensSold);
         uint256 tokens = SafeMath.min256(desiredTokens, tokensRemaining);
@@ -266,6 +262,7 @@ contract BPZSmartTokenSale is BaseContract, Owned {
             FUTURE_HIRES_TOKENS +
             TEAM_TOKENS +
             BLITZPREDICT_TOKENS +
+            PRE_SALE_TOKENS +
             TOKEN_SALE_TOKENS;
 
         return sum == MAX_TOKENS;

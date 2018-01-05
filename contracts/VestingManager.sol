@@ -1,12 +1,13 @@
 pragma solidity 0.4.18;
 
 import "./common/Owned.sol";
+import "./common/TokenRetriever.sol";
 import "./common/SafeMath.sol";
 import "./BPZSmartToken.sol";
 
 // solhint-disable not-rely-on-time
 
-contract VestingManager is BaseContract, Owned {
+contract VestingManager is BaseContract, Owned, TokenRetriever {
     using SafeMath for uint256;
 
     // The BPZ smart token instance
@@ -27,7 +28,6 @@ contract VestingManager is BaseContract, Owned {
 
     event TokensGranted(address indexed from, address indexed to, uint256 value);
     event VestedTokensClaimed(address indexed holder, uint256 value);
-    event GrantRevoked(address indexed holder, uint256 refund);
 
     /// @dev Constructor that initializes the address of the BPZSmartToken contract.
     /// @param _bpc BPZSmartToken The address of the previously deployed BPZSmartToken smart contract.
@@ -66,27 +66,6 @@ contract VestingManager is BaseContract, Owned {
         });
 
         TokensGranted(msg.sender, _to, _value);
-    }
-
-    /// @dev Revoke the grant of tokens of a specifed address.
-    /// @param _holder The address which will have its tokens revoked.
-    function revokeGrant(address _holder)
-        public
-        onlyOwner
-        greaterThanZero(grants[_holder].value)
-    {
-        Grant storage grant = grants[_holder];
-
-        // Send the remaining BPZ back to the owner.
-        uint256 refund = grant.value.sub(grant.claimed);
-
-        // Remove the grant.
-        delete grants[_holder];
-
-        totalVesting = totalVesting.sub(refund);
-        bpz.transfer(owner, refund);
-
-        GrantRevoked(_holder, refund);
     }
 
     /// @dev Calculate the total amount of vested tokens of a holder at a given time.

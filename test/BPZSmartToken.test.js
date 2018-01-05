@@ -10,55 +10,55 @@ contract("BPZSmartToken", (accounts) => {
         bpz = await BPZSmartToken.new();
     });
 
-    describe("ERC20 interface", () => {
+    describe("ERC20 interface:", () => {
         beforeEach(async () => {
             // The ERC20 standard isn't aware of the possibility of disabled transfers
             await bpz.disableTransfers(false);
         });
 
-        describe("name", () => {
+        describe("name()", () => {
             it("should return BlitzPredict as the token name", async () => {
                 const name = await bpz.name();
                 assert.equal(name, "BlitzPredict");
             });
         });
 
-        describe("symbol", () => {
+        describe("symbol()", () => {
             it("should return BPZ as the token symbol", async () => {
                 const symbol = await bpz.symbol();
                 assert.equal(symbol, "BPZ");
             });
         });
 
-        describe("decimals", () => {
+        describe("decimals()", () => {
             it("should return 18 decimals", async () => {
                 const decimals = await bpz.decimals();
                 assert.equal(decimals, 18);
             });
         });
 
-        describe("totalSupply", () => {
+        describe("totalSupply()", () => {
             it("should return 0 for the intial supply", async () => {
                 const totalSupply = await bpz.totalSupply();
                 assert.equal(totalSupply, 0);
             });
         });
 
-        describe("balanceOf", () => {
+        describe("balanceOf()", () => {
             it("should return 0 for the initial balance", async () => {
                 const balance = await bpz.balanceOf(accounts[0]);
                 assert.equal(balance, 0);
             });
         });
 
-        describe("allowance", () => {
+        describe("allowance()", () => {
             it("should return 0 for the initial allowance", async () => {
                 const allowance = await bpz.allowance(accounts[0], accounts[1]);
                 assert.equal(allowance, 0);
             });
         });
 
-        describe("transfer", () => {
+        describe("transfer()", () => {
             it("should throw if the target address is invalid", async () => {
                 await bpz.issue(accounts[0], 100);
 
@@ -93,7 +93,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("transferFrom", () => {
+        describe("transferFrom()", () => {
             it("should throw if the 'from' isn't a valid address", async () => {
                 const promise = bpz.transferFrom(0, accounts[2], 50);
                 await utils.expectInvalidOpcode(promise);
@@ -156,7 +156,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("approve", () => {
+        describe("approve()", () => {
             it("should throw if the 'spender' is an invalid address", async () => {
                 const promise = bpz.approve(0, 100);
                 await utils.expectInvalidOpcode(promise);
@@ -184,15 +184,15 @@ contract("BPZSmartToken", (accounts) => {
         });
     });
 
-    describe("Bancor SmartToken interface", () => {
-        describe("transfersEnabled", () => {
+    describe("Bancor SmartToken interface:", () => {
+        describe("transfersEnabled()", () => {
             it("should default to false", async () => {
                 const transfersEnabled = await bpz.transfersEnabled();
                 assert.isFalse(transfersEnabled);
             });
         });
 
-        describe("NewSmartToken", () => {
+        describe("NewSmartToken()", () => {
             it("should be logged when creating a new BPZSmartToken", async () => {
                 const newToken = await BPZSmartToken.new();
 
@@ -200,7 +200,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("disableTransfer", () => {
+        describe("disableTransfers()", () => {
             it("should allow disabling", async () => {
                 await bpz.disableTransfers(true);
 
@@ -215,7 +215,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("issue", () => {
+        describe("issue()", () => {
             it("should throw if the 'to' address is invalid", async () => {
                 const promise = bpz.issue(0, 100);
                 await utils.expectInvalidOpcode(promise);
@@ -236,7 +236,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("destroy", () => {
+        describe("destroy()", () => {
             it("should throw if trying to destroy someone else's tokens", async () => {
                 await bpz.issue(accounts[2], 100);
                 const promise = bpz.destroy(accounts[2], 50, {
@@ -257,7 +257,7 @@ contract("BPZSmartToken", (accounts) => {
                     from: accounts[1]
                 });
 
-                await expectTransferEvent(accounts[1], bpz.address, 100);
+                await expectTransferEvent(accounts[1], "0x0000000000000000000000000000000000000000", 100);
                 await expectDestructionEvent(100, { logIndex: 1 });
 
                 assert.equal(await bpz.balanceOf(accounts[1]), 0);
@@ -268,7 +268,7 @@ contract("BPZSmartToken", (accounts) => {
                 await bpz.issue(accounts[1], 100);
                 await bpz.destroy(accounts[1], 100);
 
-                await expectTransferEvent(accounts[1], bpz.address, 100);
+                await expectTransferEvent(accounts[1], "0x0000000000000000000000000000000000000000", 100);
                 await expectDestructionEvent(100, { logIndex: 1 });
 
                 assert.equal(await bpz.balanceOf(accounts[1]), 0);
@@ -276,7 +276,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("transfer", () => {
+        describe("transfer()", () => {
             it("should throw if transfers are disabled", async () => {
                 await bpz.issue(accounts[0], 100);
 
@@ -285,7 +285,7 @@ contract("BPZSmartToken", (accounts) => {
             });
         });
 
-        describe("transferFrom", () => {
+        describe("transferFrom()", () => {
             it("should throw if transfers are disabled", async () => {
                 await bpz.issue(accounts[0], 100);
                 await bpz.approve(accounts[1], 75);

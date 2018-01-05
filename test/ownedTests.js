@@ -11,21 +11,21 @@ function describeTests(ownedFactory, accounts) {
         owned = ownedFactory();
     });
 
-    describe("owner", () => {
+    describe("owner()", () => {
         it("should be the account that created the contract", async () => {
             const owner = await owned.owner();
             assert.equal(owner, accounts[0]);
         });
     });
 
-    describe("newOwner", () => {
+    describe("newOwner()", () => {
         it("should default to the 0 address", async () => {
             const newOwner = await owned.newOwner();
             assert.equal(newOwner, 0);
         });
     });
 
-    describe("transferOwnership", () => {
+    describe("transferOwnership()", () => {
         it("should throw if called by anyone but the owner", async () => {
             const promise = owned.transferOwnership(accounts[2], {
                 from: accounts[1]
@@ -45,7 +45,7 @@ function describeTests(ownedFactory, accounts) {
         });
     });
 
-    describe("acceptOwnership", () => {
+    describe("acceptOwnership()", () => {
         it("should throw if the caller is not the new owner", async () => {
             await owned.transferOwnership(accounts[1]);
 
