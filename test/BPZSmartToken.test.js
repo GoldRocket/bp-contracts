@@ -10,12 +10,24 @@ contract("BPZSmartToken", (accounts) => {
         bpz = await BPZSmartToken.new();
     });
 
-    describe("ERC20 interface:", () => {
-        beforeEach(async () => {
-            // The ERC20 standard isn't aware of the possibility of disabled transfers
-            await bpz.disableTransfers(false);
+    describe("fallback function", () => {
+        it("should throw if an invalid function is called", async () => {
+            const hash = web3.sha3("this function does not exist");
+            const functionSignature = hash.slice(0, 6);
+
+            const promise = bpz.sendTransaction({
+                data: functionSignature
+            });
+            await utils.expectInvalidOpcode(promise);
         });
 
+        it("should throw if the contract is directly sent ether", async () => {
+            const promise = bpz.send(web3.toWei(1, "ether"));
+            await utils.expectInvalidOpcode(promise);
+        });
+    });
+
+    describe("ERC20 interface:", () => {
         describe("name()", () => {
             it("should return BlitzPredict as the token name", async () => {
                 const name = await bpz.name();
@@ -186,9 +198,9 @@ contract("BPZSmartToken", (accounts) => {
 
     describe("Bancor SmartToken interface:", () => {
         describe("transfersEnabled()", () => {
-            it("should default to false", async () => {
+            it("should default to true", async () => {
                 const transfersEnabled = await bpz.transfersEnabled();
-                assert.isFalse(transfersEnabled);
+                assert.isTrue(transfersEnabled);
             });
         });
 
@@ -278,6 +290,7 @@ contract("BPZSmartToken", (accounts) => {
 
         describe("transfer()", () => {
             it("should throw if transfers are disabled", async () => {
+                bpz.disableTransfers(true);
                 await bpz.issue(accounts[0], 100);
 
                 const promise = bpz.transfer(accounts[1], 25);
@@ -287,6 +300,7 @@ contract("BPZSmartToken", (accounts) => {
 
         describe("transferFrom()", () => {
             it("should throw if transfers are disabled", async () => {
+                bpz.disableTransfers(true);
                 await bpz.issue(accounts[0], 100);
                 await bpz.approve(accounts[1], 75);
 

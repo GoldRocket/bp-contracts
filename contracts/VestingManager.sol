@@ -39,6 +39,14 @@ contract VestingManager is BaseContract, Owned, TokenRetriever {
         bpz = _bpc;
     }
 
+    /// @dev Fallback function -- simply assert false
+    function ()
+        external
+        payable
+    {
+        assert(false);
+    }
+
     /// @dev Grant tokens to a specified address.
     /// @param _to address The address to grant tokens to.
     /// @param _value uint256 The amount of tokens to be granted.

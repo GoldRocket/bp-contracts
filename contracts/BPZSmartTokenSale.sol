@@ -78,6 +78,7 @@ contract BPZSmartTokenSale is BaseContract, Owned, TokenRetriever {
         assert(tokenCountsAreValid());
 
         bpz = new BPZSmartToken();
+        bpz.disableTransfers(true);
         startTime = _startTime;
     }
 

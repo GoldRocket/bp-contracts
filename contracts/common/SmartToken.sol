@@ -36,6 +36,14 @@ contract SmartToken is BaseContract, Owned, TokenRetriever, ERC20Token {
         NewSmartToken(address(this));
     }
 
+    /// @dev Fallback function -- simply assert false
+    function ()
+        external
+        payable
+    {
+        assert(false);
+    }
+
     /// @dev disables/enables transfers
     /// can only be called by the contract owner
     /// @param _disable    true to disable transfers, false to enable them

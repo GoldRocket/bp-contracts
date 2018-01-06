@@ -89,7 +89,6 @@ contract("VestingManager", (accounts) => {
 
     beforeEach(async () => {
         bpz = await BPZSmartToken.new();
-        await bpz.disableTransfers(false);
         vestingManager = await VestingManager.new(bpz.address);
         yesterday = moment().subtract(1, "day").unix();
         now = moment().unix();
@@ -107,6 +106,23 @@ contract("VestingManager", (accounts) => {
 
         it("should save the bpz token address", async () => {
             assert.equal(await vestingManager.bpz(), bpz.address);
+        });
+    });
+
+    describe("fallback function", () => {
+        it("should throw if an invalid function is called", async () => {
+            const hash = web3.sha3("this function does not exist");
+            const functionSignature = hash.slice(0, 6);
+
+            const promise = vestingManager.sendTransaction({
+                data: functionSignature
+            });
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should throw if the contract is directly sent ether", async () => {
+            const promise = vestingManager.send(web3.toWei(1, "ether"));
+            await utils.expectInvalidOpcode(promise);
         });
     });
 
