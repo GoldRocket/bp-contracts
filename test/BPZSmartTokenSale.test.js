@@ -1,3 +1,4 @@
+import _ from "lodash";
 import moment from "moment";
 import utils from "./utils";
 import ownedTests from "./ownedTests.js";
@@ -5,6 +6,7 @@ import ownedTests from "./ownedTests.js";
 const BPZSmartToken = artifacts.require("./BPZSmartToken.sol");
 const BPZSmartTokenSale = artifacts.require("./BPZSmartTokenSale.sol");
 const BPZSmartTokenSaleTestHarness = artifacts.require("./BPZSmartTokenSaleTestHarness.sol");
+const BPZSmartTokenSaleTestHarnessForFallback = artifacts.require("./BPZSmartTokenSaleTestHarnessForFallback.sol");
 const VestingManager = artifacts.require("./VestingManager.sol");
 
 const solidityYears = 365 * 24 * 60 * 60;
@@ -16,6 +18,46 @@ contract("BPZSmartTokenSale:", (accounts) => {
     beforeEach(async () => {
         testHarness = await BPZSmartTokenSaleTestHarness.new(moment().add(1, "minute").unix());
         tokenSale = BPZSmartTokenSale.at(testHarness.address);
+    });
+
+    describe("token counts", () => {
+        it("should add up to MAX_TOKENS", async () => {
+            const MAX_TOKENS = await tokenSale.MAX_TOKENS();
+            const SEED_ROUND_TOKENS = await tokenSale.SEED_ROUND_TOKENS();
+            const STRATEGIC_PARTNER_TOKENS = await tokenSale.STRATEGIC_PARTNER_TOKENS();
+            const ADVISOR_TOKENS = await tokenSale.ADVISOR_TOKENS();
+            const LIQUIDITY_RESERVE_TOKENS = await tokenSale.LIQUIDITY_RESERVE_TOKENS();
+            const FUTURE_HIRES_TOKENS = await tokenSale.FUTURE_HIRES_TOKENS();
+            const TEAM_TOKENS = await tokenSale.TEAM_TOKENS();
+            const BLITZPREDICT_TOKENS = await tokenSale.BLITZPREDICT_TOKENS();
+            const PRE_SALE_TOKENS = await tokenSale.PRE_SALE_TOKENS();
+            const TOKEN_SALE_TOKENS = await tokenSale.TOKEN_SALE_TOKENS();
+
+            const total = SEED_ROUND_TOKENS
+                .add(STRATEGIC_PARTNER_TOKENS)
+                .add(ADVISOR_TOKENS)
+                .add(LIQUIDITY_RESERVE_TOKENS)
+                .add(FUTURE_HIRES_TOKENS)
+                .add(TEAM_TOKENS)
+                .add(BLITZPREDICT_TOKENS)
+                .add(PRE_SALE_TOKENS)
+                .add(TOKEN_SALE_TOKENS);
+
+            assert.equal(web3.toDecimal(total), web3.toDecimal(MAX_TOKENS));
+        });
+
+        it("should be correct for issued, vesting, sold", async () => {
+            const companyIssuedTokens = await tokenSale.getCompanyIssuedTokens();
+            const vestingTokens = await tokenSale.getVestingTokens();
+            const TOKEN_SALE_TOKENS = await tokenSale.TOKEN_SALE_TOKENS();
+            const MAX_TOKENS = await tokenSale.MAX_TOKENS();
+
+            const total = companyIssuedTokens
+                .add(vestingTokens)
+                .add(TOKEN_SALE_TOKENS);
+
+            assert.equal(web3.toDecimal(total), web3.toDecimal(MAX_TOKENS));
+        });
     });
 
     describe("constructor()", () => {
@@ -40,22 +82,26 @@ contract("BPZSmartTokenSale:", (accounts) => {
             assert.equal(await instance.startTime(), startTime);
             assert.equal(await instance.getEndTime(), expectedEndTime);
         });
+
+        it("should configure the BPZ token to disable transfers", async () => {
+            const startTime = moment().add(1, "second").unix();
+            const instance = await BPZSmartTokenSale.new(startTime);
+            const bpz = BPZSmartToken.at(await instance.bpz());
+
+            assert.isFalse(await bpz.transfersEnabled());
+        });
     });
 
     describe("fallback function", () => {
-        it("should throw if an invalid function is called", async () => {
-            const hash = web3.sha3("this function does not exist");
-            const functionSignature = hash.slice(0, 6);
+        it("should call purchaseTokens", async () => {
+            const harness = await BPZSmartTokenSaleTestHarnessForFallback.new(moment().add(1, "minute").unix());
 
-            const promise = tokenSale.sendTransaction({
-                data: functionSignature
+            await harness.send(web3.toWei(1, "ether"), {
+                from: accounts[1]
             });
-            await utils.expectInvalidOpcode(promise);
-        });
+            const purchaseTokensCalled = await harness.purchaseTokensCalled();
 
-        it("should throw if the contract is directly sent ether", async () => {
-            const promise = tokenSale.send(web3.toWei(1, "ether"));
-            await utils.expectInvalidOpcode(promise);
+            assert.isTrue(purchaseTokensCalled);
         });
     });
 
@@ -82,6 +128,64 @@ contract("BPZSmartTokenSale:", (accounts) => {
             await tokenSale.setTokensPerEther(100);
             tokensPerEther = await tokenSale.tokensPerEther();
             assert.equal(tokensPerEther, 100);
+        });
+    });
+
+    describe("updateWhitelist()", () => {
+        it("should throw if participants has nothing, and contributionLimits has something.", async () => {
+            const promise = tokenSale.updateWhitelist([], [1]);
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should throw if participants has something, and contributionLimits has nothing", async () => {
+            const promise = tokenSale.updateWhitelist([accounts[0]], []);
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should throw if participants has one and contributionLimits has two", async () => {
+            const promise = tokenSale.updateWhitelist([accounts[0]], [1, 2]);
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should throw if called by anyone but the owner", async () => {
+            const promise = tokenSale.updateWhitelist([accounts[0]], [1], {
+                from: accounts[1]
+            });
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should update the whitelist correctly with one participant and one contributionLimit", async () => {
+            await tokenSale.updateWhitelist([accounts[0]], [1]);
+
+            const contributionLimit = web3.toDecimal(await tokenSale.whitelist(accounts[0]));
+
+            assert.equal(contributionLimit, 1);
+        });
+
+        it("should update the whitelist correctly with many participants and contributionLimits", async () => {
+            const contributionLimits = _.map(accounts, (_account, n) => n);
+            await tokenSale.updateWhitelist(accounts, contributionLimits);
+
+            const actualContributionLimits = await Promise.all(_.map(accounts, account => tokenSale.whitelist(account)));
+
+            _.each(accounts, (_account, n) => {
+                assert.equal(actualContributionLimits[n], contributionLimits[n]);
+            });
+        });
+
+        it("should fire the Whitelisted event for one participant", async () => {
+            await tokenSale.updateWhitelist([accounts[0]], [1]);
+
+            await expectWhitelistedEvent(accounts[0], 1);
+        });
+
+        it("should fire the Whitelisted event for many participants", async () => {
+            const contributionLimits = _.map(accounts, (_account, n) => n);
+            await tokenSale.updateWhitelist(accounts, contributionLimits);
+
+            await Promise.all(_.each(accounts, async (account, n) => {
+                await expectWhitelistedEvent(account, n, { logIndex: n });
+            }));
         });
     });
 
@@ -189,6 +293,18 @@ contract("BPZSmartTokenSale:", (accounts) => {
             await tokenSale.finalizeSale();
 
             assert.isTrue(await bpz.transfersEnabled());
+        });
+
+        it("should disable issuance and destruction of the token", async () => {
+            const bpz = BPZSmartToken.at(await tokenSale.bpz());
+            assert.isTrue(await bpz.issuanceEnabled());
+            assert.isTrue(await bpz.destructionEnabled());
+
+            await buyAllTokens();
+            await tokenSale.finalizeSale();
+
+            assert.isFalse(await bpz.issuanceEnabled());
+            assert.isFalse(await bpz.destructionEnabled());
         });
 
         async function verifyGrant(params) {
@@ -453,6 +569,10 @@ contract("BPZSmartTokenSale:", (accounts) => {
 
         beforeEach(async () => {
             await tokenSale.setTokensPerEther(100);
+            await tokenSale.updateWhitelist(
+                [accounts[1], accounts[2]],
+                [web3.toWei(100, "ether"), web3.toWei(100, "ether")]
+            );
         });
 
         it("should throw if the sale has not yet started", async () => {
@@ -493,6 +613,29 @@ contract("BPZSmartTokenSale:", (accounts) => {
 
             tokensSold = web3.toDecimal(await tokenSale.tokensSold());
             assert.equal(tokensSold, oneHundredInWei);
+        });
+
+        it("should increment the total number of tokens purchased by the contributor", async () => {
+            await testHarness.forceSaleStart();
+
+            const tokensPurchasedBefore = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedBefore, 0);
+
+            await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            const tokensPurchasedAfter = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedAfter, oneHundredInWei);
+
+            await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            const tokensPurchasedAfter2 = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedAfter2, oneHundredInWei * 2);
         });
 
         it("should issue the full number of tokens to the purchaser", async () => {
@@ -551,6 +694,11 @@ contract("BPZSmartTokenSale:", (accounts) => {
             await tokenSale.setTokensPerEther(tokensPerEther);
             await testHarness.forceSaleStart();
 
+            await tokenSale.updateWhitelist(
+                [accounts[1], accounts[2]],
+                [web3.toWei(100, "ether"), web3.toWei(100, "ether")]
+            );
+
             const account1BalanceBefore = web3.eth.getBalance(accounts[1]);
             await tokenSale.purchaseTokens({
                 from: accounts[1],
@@ -580,6 +728,81 @@ contract("BPZSmartTokenSale:", (accounts) => {
             assert.isBelow(account2Diff, account1Diff);
             assert.equal(account2Diff, expectedDiff);
         });
+
+        it("should not allow purchase by a contributor that is not whitelisted", async () => {
+            await testHarness.forceSaleStart();
+            const promise = tokenSale.purchaseTokens({
+                from: accounts[3],
+                value: web3.toWei(1, "ether")
+            });
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should not allow purchase by a contributor that has their limit reduced after their first purchase", async () => {
+            await testHarness.forceSaleStart();
+            await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            await tokenSale.updateWhitelist([accounts[1]], [0]);
+
+            const promise = tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            await utils.expectInvalidOpcode(promise);
+        });
+
+        it("should limit the contributor to their whitelisted contribution cap", async () => {
+            await testHarness.forceSaleStart();
+
+            await tokenSale.updateWhitelist([accounts[1]], [web3.toWei(0.5, "ether")]);
+
+            const balanceBefore = web3.eth.getBalance(accounts[1]);
+            const tx = await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether"),
+                gasPrice: 1
+            });
+            const balanceAfter = web3.eth.getBalance(accounts[1]);
+            const diff = web3.toDecimal(balanceBefore.sub(balanceAfter));
+
+            const tokensPerEther = await tokenSale.tokensPerEther();
+            const oneInWei = new web3.BigNumber(web3.toWei(1, "ether"));
+            const weiPerToken = oneInWei.div(tokensPerEther);
+            const expectedTokenCost = weiPerToken.mul(50);
+            const gasCost = tx.receipt.gasUsed;
+            const expectedDiff = Math.floor(web3.toDecimal(expectedTokenCost.add(gasCost)));
+
+            assert.equal(diff, expectedDiff);
+        });
+
+        it("should allow a contributor to submit more than one purchase to consume their whitelist cap", async () => {
+            await testHarness.forceSaleStart();
+
+            await tokenSale.updateWhitelist([accounts[1]], [web3.toWei(1.5, "ether")]);
+
+            const tokensPurchasedBefore = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedBefore, 0);
+
+            await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            const tokensPurchasedAfter = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedAfter, oneHundredInWei);
+
+            await tokenSale.purchaseTokens({
+                from: accounts[1],
+                value: web3.toWei(1, "ether")
+            });
+
+            const tokensPurchasedAfter2 = web3.toDecimal(await tokenSale.tokensPurchased(accounts[1]));
+            assert.equal(tokensPurchasedAfter2, oneHundredInWei * 1.5);
+        });
     });
 
     describe("Owned:", () => {
@@ -592,6 +815,7 @@ contract("BPZSmartTokenSale:", (accounts) => {
 
         // Set the exchange rate so we can buy all the tokens with a single Ether
         await tokenSale.setTokensPerEther(tokenSaleTokens);
+        await tokenSale.updateWhitelist([accounts[1]], [tokenSaleTokensInWei]);
 
         // Force the sale to start
         await testHarness.forceSaleStart();
@@ -624,6 +848,17 @@ contract("BPZSmartTokenSale:", (accounts) => {
             args: {
                 _to,
                 _tokens: new web3.BigNumber(_tokens)
+            },
+            ...filter
+        });
+    }
+
+    async function expectWhitelistedEvent(_participant, _contributionLimit, filter = {}) {
+        await utils.expectEvent(tokenSale, {
+            event: "Whitelisted",
+            args: {
+                _participant,
+                _contributionLimit: new web3.BigNumber(_contributionLimit)
             },
             ...filter
         });
