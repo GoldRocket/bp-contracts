@@ -1,15 +1,18 @@
 pragma solidity 0.4.18;
 
 import "./BaseContract.sol";
+import "./TokenRetriever.sol";
 import "./ERC20Token.sol";
 import "./Owned.sol";
 
-contract SmartToken is BaseContract, Owned, ERC20Token {
+contract SmartToken is BaseContract, Owned, TokenRetriever, ERC20Token {
     using SafeMath for uint256;
 
     string public version = "0.3";
 
     bool public transfersEnabled = true;
+    bool public issuanceEnabled = true;
+    bool public destructionEnabled = true;
 
     // triggered when a smart token is deployed
     // the _token address is defined for forward compatibility,
@@ -33,11 +36,12 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
         NewSmartToken(address(this));
     }
 
-    // allows execution only when transfers aren't disabled
-    modifier onlyIfTransfersEnabled {
-        assert(transfersEnabled);
-
-        _;
+    /// @dev Fallback function -- simply assert false
+    function ()
+        external
+        payable
+    {
+        assert(false);
     }
 
     /// @dev disables/enables transfers
@@ -50,6 +54,26 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
         transfersEnabled = !_disable;
     }
 
+    /// @dev disables/enables token issuance
+    /// can only be called by the contract owner
+    function disableIssuance()
+        public
+        onlyOwner
+        onlyIf(issuanceEnabled)
+    {
+        issuanceEnabled = false;
+    }
+
+    /// @dev disables/enables token destruction
+    /// can only be called by the contract owner
+    function disableDestruction()
+        public
+        onlyOwner
+        onlyIf(destructionEnabled)
+    {
+        destructionEnabled = false;
+    }
+
     /// @dev increases the token supply and sends the new tokens to an account
     /// can only be called by the contract owner
     /// @param _to         account to receive the new amount
@@ -59,6 +83,7 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
         onlyOwner
         validParamData(2)
         validAddress(_to)
+        onlyIf(issuanceEnabled)
         notThis(_to)
     {
         totalSupply = totalSupply.add(_amount);
@@ -74,6 +99,7 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
     /// @param _amount     amount to decrease the supply by
     function destroy(address _from, uint256 _amount)
         public
+        onlyIf(destructionEnabled)
         validParamData(2)
     {
         require(msg.sender == _from || msg.sender == owner); // validate input
@@ -81,7 +107,7 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
         balanceOf[_from] = balanceOf[_from].sub(_amount);
         totalSupply = totalSupply.sub(_amount);
 
-        Transfer(_from, this, _amount);
+        Transfer(_from, 0x0, _amount);
         Destruction(_amount);
     }
 
@@ -98,7 +124,7 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
     function transfer(address _to, uint256 _value)
         public
         validParamData(2)
-        onlyIfTransfersEnabled
+        onlyIf(transfersEnabled)
         returns (bool success)
     {
         assert(super.transfer(_to, _value));
@@ -115,7 +141,7 @@ contract SmartToken is BaseContract, Owned, ERC20Token {
     function transferFrom(address _from, address _to, uint256 _value)
         public
         validParamData(3)
-        onlyIfTransfersEnabled
+        onlyIf(transfersEnabled)
         returns (bool success)
     {
         assert(super.transferFrom(_from, _to, _value));

@@ -7,6 +7,5 @@ contract BPZSmartToken is SmartToken {
         public
         SmartToken("BlitzPredict", "BPZ", 18)
     {
-        disableTransfers(true);
     }
 }

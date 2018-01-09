@@ -2,31 +2,31 @@ pragma solidity 0.4.18;
 
 import "./common/BaseContract.sol";
 import "./common/Owned.sol";
+import "./common/TokenRetriever.sol";
 import "./BPZSmartToken.sol";
 import "./VestingManager.sol";
 
 // solhint-disable not-rely-on-time
 
 /// @title BPC Smart Token sale
-contract BPZSmartTokenSale is BaseContract, Owned {
+contract BPZSmartTokenSale is BaseContract, Owned, TokenRetriever {
     using SafeMath for uint256;
-
-    uint256 public constant DURATION = 14 days;
-
-    bool public isFinalized = false;
 
     BPZSmartToken public bpz;
     VestingManager public vestingManager;
 
     uint256 public startTime = 0;
-    uint256 public etherPriceUSD = 300;
-
+    uint256 public tokensPerEther = 25000;
     uint256 public tokensSold = 0;
+    bool public isFinalized = false;
+    mapping(address => uint256) public whitelist;
+    mapping(address => uint256) public tokensPurchased;
 
-    // TODO: dacarley: Update with real addresses.
-    address public constant BLITZPREDICT_ADDRESS = 0x1234567890123456789012345678901234567890;
-    address public constant FUTURE_HIRES_ADDRESS = 0x0987654321098765432109876543210987654321;
-    address public constant TEAM_ADDRESS = 0x1234567890098765432112345678900987654321;
+    address public constant BLITZPREDICT_ADDRESS = 0x5Bf7300FA42dA87e4DA509f19A424379F570aE8c;
+    address public constant FUTURE_HIRES_ADDRESS = 0xe4f14C37096C0086dCe359D124CF609a73823571;
+    address public constant TEAM_ADDRESS = 0x04eDa37f4Dc2025c2FCE1CfaD65C0b2ac175AF0e;
+
+    uint256 public constant DURATION = 31 days;
 
     uint256 public constant MAX_TOKENS = (10 ** 9) * (10 ** 18);
     uint256 public constant ONE_PERCENT = MAX_TOKENS / 100;
@@ -37,10 +37,10 @@ contract BPZSmartTokenSale is BaseContract, Owned {
     uint256 public constant FUTURE_HIRES_TOKENS = 9 * ONE_PERCENT;
     uint256 public constant TEAM_TOKENS = 18 * ONE_PERCENT;
     uint256 public constant BLITZPREDICT_TOKENS = 20 * ONE_PERCENT;
-    uint256 public constant TOKEN_SALE_TOKENS = 30 * ONE_PERCENT;
+    uint256 public constant PRE_SALE_TOKENS = 15 * ONE_PERCENT;
+    uint256 public constant TOKEN_SALE_TOKENS = 15 * ONE_PERCENT;
 
-    uint256 public constant USD_CAP = 6 * 10**6;
-
+    event Whitelisted(address indexed _participant, uint256 _contributionLimit);
     event TokensPurchased(address indexed _to, uint256 _tokens);
 
     modifier onlyDuringSale() {
@@ -75,26 +75,38 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         public
         onlyIf(_startTime > now)
     {
-        assert(tokenCountsAreValid());
-
         bpz = new BPZSmartToken();
+        bpz.disableTransfers(true);
         startTime = _startTime;
     }
 
-    /// @dev Fallback function -- simply assert false
+    /// @dev Fallback function -- just purchase tokens
     function ()
         external
         payable
     {
-        assert(false);
+        purchaseTokens();
     }
 
-    function setEtherPriceUSD(uint256 price)
+    /// @dev Sets the number of BPZ that can be purchased for one ether
+    function setTokensPerEther(uint256 _tokensPerEther)
         external
         onlyOwner
         onlyBeforeSale
     {
-        etherPriceUSD = price;
+        tokensPerEther = _tokensPerEther;
+    }
+
+    /// @dev Adds or modifies items in the whitelist
+    function updateWhitelist(address[] participants, uint256[] contributionLimits)
+        external
+        onlyOwner
+        onlyIf(participants.length == contributionLimits.length)
+    {
+        for (uint256 i = 0; i < participants.length; ++i) {
+            whitelist[participants[i]] = contributionLimits[i];
+            Whitelisted(participants[i], contributionLimits[i]);
+        }
     }
 
     /// @dev Finalizes the token sale event.
@@ -106,8 +118,6 @@ contract BPZSmartTokenSale is BaseContract, Owned {
     {
         uint256 companyIssuedTokens = getCompanyIssuedTokens();
         uint256 vestingTokens = getVestingTokens();
-
-        assert(companyIssuedTokens + vestingTokens + TOKEN_SALE_TOKENS == MAX_TOKENS);
 
         // Issue the immediate tokens to the company wallet
         bpz.issue(BLITZPREDICT_ADDRESS, companyIssuedTokens);
@@ -126,6 +136,10 @@ contract BPZSmartTokenSale is BaseContract, Owned {
 
         // Re-enable transfers after the token sale.
         bpz.disableTransfers(false);
+
+        // Permanently disable issuance and destruction
+        bpz.disableIssuance();
+        bpz.disableDestruction();
 
         isFinalized = true;
     }
@@ -188,7 +202,8 @@ contract BPZSmartTokenSale is BaseContract, Owned {
             SEED_ROUND_TOKENS +
             STRATEGIC_PARTNER_TOKENS +
             ADVISOR_TOKENS +
-            LIQUIDITY_RESERVE_TOKENS;
+            LIQUIDITY_RESERVE_TOKENS +
+            PRE_SALE_TOKENS;
     }
 
     function getVestingTokens()
@@ -208,25 +223,21 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         return startTime + DURATION;
     }
 
-
-    function getTokensPerEther()
-        public view
-        returns (uint256)
-    {
-        return etherPriceUSD * TOKEN_SALE_TOKENS / USD_CAP;
-    }
-
-    /// @dev Create and sell tokens to the caller.
+     /// @dev Create and sell tokens to the caller.
     function purchaseTokens()
         public
         payable
         onlyDuringSale
         greaterThanZero(msg.value)
     {
-        uint256 tokensPerEther = getTokensPerEther();
+        uint256 purchaseLimit = whitelist[msg.sender].mul(tokensPerEther);
+        uint256 purchaseLimitRemaining = purchaseLimit.sub(tokensPurchased[msg.sender]);
+        require(purchaseLimitRemaining > 0);
+
         uint256 desiredTokens = msg.value.mul(tokensPerEther);
+        uint256 desiredTokensCapped = SafeMath.min256(desiredTokens, purchaseLimitRemaining);
         uint256 tokensRemaining = TOKEN_SALE_TOKENS.sub(tokensSold);
-        uint256 tokens = SafeMath.min256(desiredTokens, tokensRemaining);
+        uint256 tokens = SafeMath.min256(desiredTokensCapped, tokensRemaining);
         uint256 contribution = tokens.div(tokensPerEther);
 
         issuePurchasedTokens(msg.sender, tokens);
@@ -247,27 +258,10 @@ contract BPZSmartTokenSale is BaseContract, Owned {
         private
     {
         tokensSold = tokensSold.add(_tokens);
+        tokensPurchased[msg.sender] = tokensPurchased[msg.sender].add(_tokens);
 
         bpz.issue(_recipient, _tokens);
 
         TokensPurchased(_recipient, _tokens);
-    }
-
-    function tokenCountsAreValid()
-        private
-        pure
-        returns (bool)
-    {
-        uint256 sum = 0 +
-            SEED_ROUND_TOKENS +
-            STRATEGIC_PARTNER_TOKENS +
-            ADVISOR_TOKENS +
-            LIQUIDITY_RESERVE_TOKENS +
-            FUTURE_HIRES_TOKENS +
-            TEAM_TOKENS +
-            BLITZPREDICT_TOKENS +
-            TOKEN_SALE_TOKENS;
-
-        return sum == MAX_TOKENS;
     }
 }
