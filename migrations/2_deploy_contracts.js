@@ -7,5 +7,5 @@ module.exports = (deployer) => {
     deployer.deploy(SafeMath);
 
     deployer.link(SafeMath, BPZSmartTokenSale);
-    deployer.deploy(BPZSmartTokenSale, moment("2018-01-10T16:00:00Z").unix());
+    deployer.deploy(BPZSmartTokenSale, moment().add(1, "day").unix());
 };
