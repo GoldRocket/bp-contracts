@@ -261,7 +261,7 @@ contract("BPZSmartTokenSale:", (accounts) => {
                 address: await tokenSale.FUTURE_HIRES_ADDRESS(),
                 tokens: await tokenSale.FUTURE_HIRES_TOKENS(),
                 cliff: 1 * solidityYears,
-                end: 4 * solidityYears
+                end: 3 * solidityYears
             });
 
             await verifyGrant({
@@ -271,7 +271,7 @@ contract("BPZSmartTokenSale:", (accounts) => {
                 address: await tokenSale.TEAM_ADDRESS(),
                 tokens: await tokenSale.TEAM_TOKENS(),
                 cliff: 1 * solidityYears,
-                end: 4 * solidityYears
+                end: 3 * solidityYears
             });
 
             await verifyGrant({

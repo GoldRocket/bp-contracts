@@ -36,9 +36,10 @@ async function expectInvalidOpcode(promise) {
         await promise;
     } catch (error) {
         const invalidOpcode = error.message.search("invalid opcode") >= 0;
+        const revert = error.message.search("revert") >= 0;
         assert(
-            invalidOpcode,
-            `Expected invalid opcode, got '${error}' instead`,
+            invalidOpcode || revert,
+            `Expected "invalid opcode" or "revert", got '${error}' instead`,
         );
 
         threw = true;

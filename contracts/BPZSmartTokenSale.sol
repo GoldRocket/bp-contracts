@@ -128,10 +128,10 @@ contract BPZSmartTokenSale is BaseContract, Owned, TokenRetriever {
 
         uint256 oneYear = now.add(1 years);
         uint256 twoYears = now.add(2 years);
-        uint256 fourYears = now.add(4 years);
+        uint256 threeYears = now.add(3 years);
 
-        vestingManager.grantTokens(FUTURE_HIRES_ADDRESS, FUTURE_HIRES_TOKENS, now, oneYear, fourYears);
-        vestingManager.grantTokens(TEAM_ADDRESS, TEAM_TOKENS, now, oneYear, fourYears);
+        vestingManager.grantTokens(FUTURE_HIRES_ADDRESS, FUTURE_HIRES_TOKENS, now, oneYear, threeYears);
+        vestingManager.grantTokens(TEAM_ADDRESS, TEAM_TOKENS, now, oneYear, threeYears);
         vestingManager.grantTokens(BLITZPREDICT_ADDRESS, BLITZPREDICT_TOKENS, now, oneYear, twoYears);
 
         // Re-enable transfers after the token sale.
