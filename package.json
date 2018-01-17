@@ -16,7 +16,8 @@
     "eslint-plugin-import": "^2.8.0",
     "lodash": "^4.17.4",
     "moment": "^2.20.1",
-    "truffle": "^4.0.4"
+    "truffle": "^4.0.4",
+    "truffle-hdwallet-provider": "^0.0.3"
   },
   "scripts": {
     "postinstall": "truffle compile",
